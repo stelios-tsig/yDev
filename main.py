@@ -1,12 +1,13 @@
 from fastapi import FastAPI, Depends
 from fastapi import HTTPException
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from database import engine, get_db
 from typing import List
-from auth_utils import hash_password
+from auth_utils import hash_password, create_access_token,verify_password
 import models
 import schemas
-
+from auth_utils import get_current_user
 
 
 models.Base.metadata.create_all(bind=engine)
@@ -54,18 +55,16 @@ def read_technologies(skip: int = 0, limit: int = 100, db:Session = Depends(get_
     return technologies
 
 
-@app.post("/projects/", response_model=schemas.Project)
-def create_project(project: schemas.ProjectCreate, owner_id: int, db: Session = Depends(get_db)):
-    owner = db.query(models.User).filter(models.User.id == owner_id).first()
-    if not owner:
-        raise HTTPException(status_code=404, detail="Owner not found")
 
+#Project Creation--------------------------------------------------------------------------------
+@app.post("/projects/", response_model=schemas.Project)
+def create_project(project: schemas.ProjectCreate, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     db_project = models.Project(
         title=project.title,
         description=project.description,
         category=project.category,
         github_url=project.github_url,
-        owner_id=owner_id,
+        owner_id=current_user.id,
     )
 
     if project.technology_ids:
@@ -78,3 +77,33 @@ def create_project(project: schemas.ProjectCreate, owner_id: int, db: Session = 
     db.commit()
     db.refresh(db_project)
     return db_project
+    
+
+
+
+#Ελεγχός Project
+#Το συγκεκριμένο GET πρέπει να λειτουργεί μετά το POST διότι η λειτουργία του γίνεται με αυτό και όχι παράλληλα.
+@app.get("/projects{project_id}", response_model= schemas.Project)
+def read_project(project_id: int, db: Session = Depends(get_db)):
+    project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project: #Εαν δεν υπάρχει πρότζεκτ
+        raise HTTPException(status_code=404, detail="Project not found")
+    return project
+
+#Λίστα προτζεκτ
+
+@app.get("/projects/", response_model=List[schemas.Project])
+def read_projects(skip:int = 0, limit: int = 100, db: Session= Depends(get_db)):
+    projects = db.query(models.Project).offset(skip).limit(limit).all()
+    return projects
+
+#login
+
+@app.post("/login")
+def login(form_data: OAuth2PasswordRequestForm =Depends(), db:Session= Depends(get_db)):
+    user = db.query(models.User).filter(models.User.username == form_data.username).first()
+    if not user or not verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Incorrect username or password")
+
+    access_token = create_access_token(data={"sub": str(user.id)})
+    return {"access_token": access_token, "token_type": "bearer"}
