@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends
 from fastapi import HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from database import engine, get_db
 from typing import List
 from auth_utils import hash_password, create_access_token,verify_password
@@ -77,7 +78,7 @@ def create_project(project: schemas.ProjectCreate, current_user: models.User = D
     db.commit()
     db.refresh(db_project)
     return db_project
-    
+
 
 
 
@@ -107,3 +108,104 @@ def login(form_data: OAuth2PasswordRequestForm =Depends(), db:Session= Depends(g
 
     access_token = create_access_token(data={"sub": str(user.id)})
     return {"access_token": access_token, "token_type": "bearer"}
+
+#Comments in Projects
+@app.post("/projects/{project_id}/comments/", response_model =schemas.Comment)
+def create_comment(
+    project_id: int,
+    comment: schemas.CommentCreate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+#Ελεγχος εάν υπάρχει το project.
+    project= db.query(models.Project).filter(models.Project.id== project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    db_comment = models.Comment(
+        content= comment.content,
+        category= comment.category.value,
+        project_id=project_id,
+        user_id= current_user.id,
+    )
+    db.add(db_comment)
+    db.commit()
+    db.refresh(db_comment)
+    return db_comment
+
+
+#Comments
+@app.get("/projects/{project_id}/comment/", response_model=List[schemas.Comment])
+def read_comments(project_id: int, db: Session =Depends(get_db)):
+    comments = db.query(models.Comment).filter(models.Comment.project_id == project_id).all()
+    return comments
+
+#Rating
+@app.post("/projects/{project_id}/rating/", response_model=schemas.Rating)
+def create_rating(
+    project_id: int,
+    rating: schemas.RatingCreate,
+    current_user: models.User= Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if rating.stars <1 or rating.stars > 5:
+        raise HTTPException(status_code= 422, detail="Stars must be between 1 and 5 ")
+
+    db_rating = models.Rating(
+        stars=rating.stars,
+        project_id= project_id,
+        user_id= current_user.id,
+
+    )
+    db.add(db_rating)
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="You have already rated this project")
+
+    db.refresh(db_rating)
+    return db_rating
+
+@app.get("/projects/{project_id}/ratings/", response_model=List[schemas.Rating])
+def read_ratings(project_id: int, db: Session = Depends(get_db)):
+    ratings = db.query(models.Rating).filter(models.Rating.project_id == project_id).all()
+    return ratings
+
+
+#Εκδοχες (versions)----------------------------
+@app.post("/project/{project_id}/version/", response_model=schemas.Version)
+def create_version(
+    project_id: int,
+    version: schemas.VersionCreate,
+    current_user: models.User=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+#Ελεγχος ιδιοκτησίας-----------------------
+    if project.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only the project owner can add Versions")
+        
+    db_version = models.Version(
+        version_number= version.version_number,
+        changelog = version.changelog,
+        project_id= project_id,
+    )
+
+    db.add(db_version)
+    db.commit()
+    db.refresh(db_version)
+    return db_version
+
+@app.get("/projects/{project_id}/versions/", response_model=List[schemas.Version])
+def read_versions(project_id: int, db: Session = Depends(get_db)):
+    versions= db.query(models.Version).filter(models.Version.project_id== project_id).all()
+    return versions

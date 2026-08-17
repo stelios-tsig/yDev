@@ -65,7 +65,7 @@ class Version(BaseModel):
 
 class VersionCreate(BaseModel):
     version_number: str
-    changeLog: str | None = None
+    changelog: str | None = None
 
 class CommentCategory(str, Enum):
     feature_idea = "Feature Idea"
@@ -88,7 +88,7 @@ class Comment(CommentBase):
 class RatingBase(BaseModel):
     stars: int
 
-class RatingCreate(BaseModel):
+class RatingCreate(RatingBase):
     pass
 
 class Rating(RatingBase):
