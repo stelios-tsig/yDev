@@ -1,21 +1,26 @@
-from fastapi import FastAPI, Depends
-from fastapi import HTTPException
+from fastapi import FastAPI, Depends, UploadFile, File, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from database import engine, get_db
 from typing import List
-from auth_utils import hash_password, create_access_token,verify_password
+from auth_utils import hash_password, create_access_token, verify_password, get_current_user
 import models
+import shutil
+import os
 import schemas
-from auth_utils import get_current_user
+
+
 
 
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+#Έυρεση αρχείου με το συγκεκριμένο όνομα στον φάκελο uploads.
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
-#Ελεγχος διπλότυπου email
+#Ελεγχος διπλότυπου email---------------------------------------------------
 
 @app.post("/users/", response_model=schemas.User)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
@@ -91,14 +96,14 @@ def read_project(project_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Project not found")
     return project
 
-#Λίστα προτζεκτ
+#Λίστα προτζεκτ---------------------------------------------------------------------
 
 @app.get("/projects/", response_model=List[schemas.Project])
 def read_projects(skip:int = 0, limit: int = 100, db: Session= Depends(get_db)):
     projects = db.query(models.Project).offset(skip).limit(limit).all()
     return projects
 
-#login
+#login------------------------------------------------------------------------------
 
 @app.post("/login")
 def login(form_data: OAuth2PasswordRequestForm =Depends(), db:Session= Depends(get_db)):
@@ -209,3 +214,41 @@ def create_version(
 def read_versions(project_id: int, db: Session = Depends(get_db)):
     versions= db.query(models.Version).filter(models.Version.project_id== project_id).all()
     return versions
+
+
+
+#UPLOAD PHOTOS--------------------------------------------------
+
+UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok= True)
+
+@app.post("/projects/{project_id}/upload-image/", response_model=schemas.Project)
+def upload_project_image(
+    project_id: int,
+    file: UploadFile = File(...),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+
+    project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if project.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only the project owner can upload images")
+
+    allowed_extensions = {".jpg", ".jpeg", ".png", ".webp"}
+    file_extension = os.path.splitext(file.filename)[1].lower()
+    if file_extension not in allowed_extensions:
+        raise HTTPException(status_code=400, detail="Invalid file type")
+
+    filename = f"project_{project_id}{file_extension}"
+    file_path = os.path.join(UPLOAD_DIR, filename)
+
+    with open(file_path, "wb") as butter:
+        shutil.copyfileobj(file.file, butter)
+
+    project.image_url = f"/{UPLOAD_DIR}/{filename}"
+    db.commit()
+    db.refresh(project)
+    return project        

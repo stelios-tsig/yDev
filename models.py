@@ -48,7 +48,8 @@ class Project(Base):
     category = Column(String, nullable=False)  # ΑΛΛΑΓΗ: πρόσθεσα το πεδίο που έλειπε
     github_url = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-
+    image_url = Column(String, nullable=True)
+    
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     owner = relationship("User", back_populates="projects")
@@ -56,6 +57,7 @@ class Project(Base):
     comments = relationship("Comment", back_populates="project", cascade="all, delete-orphan")
     ratings = relationship("Rating", back_populates="project", cascade="all, delete-orphan")
     technologies = relationship("Technology", secondary=project_technologies, back_populates="projects")  # ΑΛΛΑΓΗ: αντικατέστησε το tech_stack
+
 
 
 class Version(Base):

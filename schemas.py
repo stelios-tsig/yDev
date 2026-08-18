@@ -36,7 +36,7 @@ class ProjectBase(BaseModel): #Κλάση Γ
     description: str | None = None #Προαιρετικό πεδίο, μπορεί να είναι None.
     category: str
     github_url: str | None = None #Το ίδιο με το description.
-
+    image_url: str | None = None
 class ProjectCreate(ProjectBase):
     technology_ids: list[int] = []  # Λίστα με τα IDs των τεχνολογιών που σχετίζονται με το project.
 
