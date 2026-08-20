@@ -10,6 +10,7 @@ import models
 import shutil
 import os
 import schemas
+from cloud_utils import upload_image_to_cloudinary
 
 
 
@@ -241,14 +242,84 @@ def upload_project_image(
     file_extension = os.path.splitext(file.filename)[1].lower()
     if file_extension not in allowed_extensions:
         raise HTTPException(status_code=400, detail="Invalid file type")
+#V2.0 
+#Προηγούμενη έκδοση 
+    image_url = upload_image_to_cloudinary(file.file,public_id=f"ydev/project_{project_id}")
+    project.image_url = image_url
 
-    filename = f"project_{project_id}{file_extension}"
-    file_path = os.path.join(UPLOAD_DIR, filename)
 
-    with open(file_path, "wb") as butter:
-        shutil.copyfileobj(file.file, butter)
-
-    project.image_url = f"/{UPLOAD_DIR}/{filename}"
     db.commit()
     db.refresh(project)
     return project        
+
+#PUT------------------------------------------------------
+@app.put("/project/{project_id}", response_model=schemas.Project)
+def update_project(
+    project_id: int,
+    project_update: schemas.ProjectCreate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session =Depends(get_db),
+):
+    project = db.query(models.Project).filter(models.Project.id ==project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if project.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only the project owner can edit this project")
+
+    project.title= project_update.title
+    project.description = project_update.description
+    project.category = project_update.category
+    project.github_url = project_update.github_url
+
+    if project_update.technology_ids:
+        technologies = db.query(models.Technology).filter(
+            models.Technology.id.in_(project_update.technology_ids)
+        ).all()
+        project.technologies = technologies
+    else:
+        project.technologies =[]
+
+    db.commit()
+    db.refresh(project)
+    return project
+
+
+
+#DELETE---------------------------------------------------
+@app.delete("/projects/{project}", status_code=204)
+def delete_project(
+    project_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project:
+        raise   HTTPException(status_code=404, detail="Project not found")
+    
+    if project.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only the project owner can delete this project")
+
+    db.delete(project)
+    db.commit()
+
+
+#COMMENT EDIT
+
+@app.delete("/comments/{comment_id}", status_code=204)
+def delete_comment(
+    comment_id: int,
+    current_user:models.User = Depends(get_current_user),
+    db:Session = Depends(get_db),
+):
+    comment = db.query(models.Comment).filter(models.Comment.id == comment_id).first()
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found")
+
+    project = db.query(models.Project).filter(models.Project.id == comment.project_id).first()
+
+    if comment.user_id != current_user.id and project.owner_id != current_user.id:
+        raise HTTPException(status_code=403,detail="Not authorized to delete this comment")
+
+    db.delete(comment)
+    db.commit()
