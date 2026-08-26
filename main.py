@@ -1,4 +1,6 @@
-from fastapi import FastAPI, Depends, UploadFile, File, HTTPException
+from fastapi import FastAPI, Depends, UploadFile, File, HTTPException, Request
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
@@ -20,6 +22,9 @@ models.Base.metadata.create_all(bind=engine)
 app = FastAPI()
 #Έυρεση αρχείου με το συγκεκριμένο όνομα στον φάκελο uploads.
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+#Ιδια λογική
+app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
 
 #Ελεγχος διπλότυπου email---------------------------------------------------
 
@@ -323,3 +328,10 @@ def delete_comment(
 
     db.delete(comment)
     db.commit()
+
+#Frontend κομμάτι
+@app.get("/home")
+def home(request: Request, db: Session = Depends(get_db)):
+    projects = db.query(models.Project).order_by(models.Project.id.desc()).all()
+    return templates.TemplateResponse(request, "index.html",{"projects":projects})
+    

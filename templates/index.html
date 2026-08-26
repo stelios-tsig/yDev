@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <title>yDev</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <h1>yDev - Projects</h1>
+    <div class="project-list">
+        {% for project in projects %}
+            <div class="project-card">
+                <h2>{{ project.title }} </h2>
+                <p> {{project.description }} </p>
+                <p><strong>Κατηγορία:</strong> {{ project.category }}</p>
+                <p><strong>Δημιουργός:</strong> {{ project.owner.username }}</p>
+                
+                {% if project.image_url %}
+                    <img src="{{ project.image_url }}" alt = "{{project.title }}" width="300">
+                {% endif %}
+
+                <p><strong>Τεχνολογίες:</strong>
+                    {% for tech in project.technologies %}
+                        {{ tech.name }} {% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                </p>
+            </div>
+        {% else %}
+            <p> Δεν υπάρχουν ακόμα projects.</p>
+        {% endfor %}
+    </div>
+</body>
+</html>
+
+
+
+
+</body>
+<html>
