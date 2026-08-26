@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ project.title }} — yDev</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <a href="/home" class="back-link">← Πίσω στα projects</a>
+
+    <div class="detail-card">
+        <h1>{{ project.title }}</h1>
+        <p class="muted">Δημιουργός: {{ project.owner.username }} · Κατηγορία: {{ project.category }}</p>
+
+        {% if project.image_url %}
+            <img src="{{ project.image_url }}" alt="{{ project.title }}" class="detail-image">
+        {% endif %}
+
+        <p>{{ project.description }}</p>
+
+        {% if project.github_url %}
+            <p><a href="{{ project.github_url }}" target="_blank">GitHub Repository</a></p>
+        {% endif %}
+
+        <p><strong>Τεχνολογίες:</strong>
+            {% for tech in project.technologies %}
+                <span class="badge">{{ tech.name }}</span>
+            {% endfor %}
+        </p>
+
+        <h2>Βαθμολογία
+            {% if average_rating %}
+                — {{ average_rating }} / 5 ⭐ ({{ ratings|length }} ψήφοι)
+            {% else %}
+                — Δεν υπάρχουν ακόμα βαθμολογίες
+            {% endif %}
+        </h2>
+
+        <h2>Εκδόσεις</h2>
+        {% for version in versions %}
+            <div class="version-item">
+                <strong>{{ version.version_number }}</strong> — {{ version.changelog }}
+            </div>
+        {% else %}
+            <p class="muted">Δεν υπάρχουν καταχωρημένες εκδόσεις.</p>
+        {% endfor %}
+
+        <h2>Σχόλια ({{ comments|length }})</h2>
+        {% for comment in comments %}
+            <div class="comment-item">
+                <strong>{{ comment.user.username }}</strong>
+                <span class="badge">{{ comment.category }}</span>
+                <p>{{ comment.content }}</p>
+            </div>
+        {% else %}
+            <p class="muted">Δεν υπάρχουν ακόμα σχόλια.</p>
+        {% endfor %}
+    </div>
+</body>
+</html>

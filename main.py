@@ -329,9 +329,31 @@ def delete_comment(
     db.delete(comment)
     db.commit()
 
-#Frontend κομμάτι
+#Frontend 
 @app.get("/home")
 def home(request: Request, db: Session = Depends(get_db)):
     projects = db.query(models.Project).order_by(models.Project.id.desc()).all()
     return templates.TemplateResponse(request, "index.html",{"projects":projects})
     
+
+#PAGE description,comments,ratings,versions
+
+@app.get("/project/{project_id}/page")
+def project_detail_page(project_id: int, request: Request, db: Session = Depends(get_db)):
+    project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    comments = db.query(models.Comment).filter(models.Comment.project_id == project_id).all()
+    ratings = db.query(models.Rating).filter(models.Rating.project_id == project_id).all()
+    versions = db.query(models.Version).filter(models.Version.project_id == project_id).all()
+
+    average_rating = round(sum(r.stars for r in ratings) / len(ratings), 1) if ratings else None
+
+    return templates.TemplateResponse(request, "project_detail.html", {
+        "project": project,
+        "comments": comments,
+        "ratings": ratings,
+        "versions": versions,
+        "average_rating": average_rating,
+    })
