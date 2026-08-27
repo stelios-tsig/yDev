@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <title>Εγγραφή — yDev</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="auth-card">
+        <h1>Δημιουργία Λογαριασμού</h1>
+        <form method="POST" action="/register">
+            <label for="username">Όνομα χρήστη</label>
+            <input type="text" id="username" name="username" required>
+
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" required>
+
+            <label for="password">Κωδικός</label>
+            <input type="password" id="password" name="password" required>
+
+            <button type="submit">Εγγραφή</button>
+        </form>
+        <p class="muted">Έχεις ήδη λογαριασμό; <a href="/login-page">Σύνδεση</a></p>
+    </div>
+</body>
+</html>

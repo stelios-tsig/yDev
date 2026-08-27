@@ -1,13 +1,14 @@
-from fastapi import FastAPI, Depends, UploadFile, File, HTTPException, Request
+from fastapi import FastAPI, Depends, UploadFile, File, HTTPException, Request ,Form
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from database import engine, get_db
 from typing import List
-from auth_utils import hash_password, create_access_token, verify_password, get_current_user
+from auth_utils import hash_password, create_access_token, verify_password, get_current_user, get_current_user_from_cookie
 import models
 import shutil
 import os
@@ -329,12 +330,6 @@ def delete_comment(
     db.delete(comment)
     db.commit()
 
-#Frontend 
-@app.get("/home")
-def home(request: Request, db: Session = Depends(get_db)):
-    projects = db.query(models.Project).order_by(models.Project.id.desc()).all()
-    return templates.TemplateResponse(request, "index.html",{"projects":projects})
-    
 
 #PAGE description,comments,ratings,versions
 
@@ -357,3 +352,69 @@ def project_detail_page(project_id: int, request: Request, db: Session = Depends
         "versions": versions,
         "average_rating": average_rating,
     })
+
+#Εγγραφή χρήστη 
+@app.get("/register")
+def register_page(request: Request):
+    return templates.TemplateResponse(request, "register.html", {})
+
+@app.post("/register")
+def register_submit(
+    username: str = Form(...),
+    email: str = Form(...),
+    password: str = Form(...),
+    db: Session = Depends(get_db),
+):
+
+    existing_user = db.query(models.User).filter(models.User.email == email).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    hashed_pw = hash_password(password)
+    db_user = models.User(username=username, email=email, hashed_password= hashed_pw)
+    db.add(db_user)
+    db.commit()
+
+    return RedirectResponse(url="/login-page",status_code=303)
+
+@app.get("/login-page")
+def login_page(request: Request):
+    return templates.TemplateResponse(request, "login.html", {})
+
+@app.post("/login-page")
+def login_page_submit(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    user = db.query(models.User).filter(models.User.username == username).first()
+    if not user or not verify_password(password, user.hashed_password):
+        return templates.TemplateResponse(
+            request, "login.html",
+            {"error": "Λάθος όνομα χρήστη ή κωδικός"},
+        )
+
+    access_token = create_access_token(data={"sub": str(user.id)})
+
+    response = RedirectResponse(url="/home", status_code=303)
+    response.set_cookie(key="access_token", value=access_token, httponly=True, max_age=1800)
+    return response
+
+#Εμφάνιση σύνδεσης
+
+@app.get("/home")
+def home(request: Request, db: Session = Depends(get_db)):
+    projects = db.query(models.Project).order_by(models.Project.id.desc()).all()
+    current_user = get_current_user_from_cookie(access_token=request.cookies.get("access_token"), db=db)
+    return templates.TemplateResponse(
+        request, "index.html", {
+        "projects": projects,
+        "current_user": current_user,
+    })
+
+@app.get("/logout")
+def logout():
+    response = RedirectResponse(url="/home", status_code=303)
+    response.delete_cookie("access_token")
+    return response

@@ -3,7 +3,7 @@ from passlib.context import CryptContext
 from datetime import datetime, timedelta,timezone
 from dotenv import load_dotenv
 from jose import jwt, JWTError
-from fastapi import Depends,HTTPException,status
+from fastapi import Depends,HTTPException,status, Cookie
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from database import get_db
@@ -63,4 +63,26 @@ def get_current_user(token: str = Depends(oauth2_scheme), db:Session = Depends(g
     user = db.query(models.User).filter(models.User.id ==int(user_id)).first()
     if user is None:
         raise credentials_exception
+    return user
+
+#Cookie
+
+def get_current_user_from_cookie(access_token: str = Cookie(None), db: Session = Depends(get_db)):
+    print("DEBUG: access_token =", access_token)
+    if access_token is None:
+        print("DEBUG: no token found")
+        return None
+
+    try:
+        payload = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        print("DEBUG: decoded user_id =", user_id)
+        if user_id is None:
+            return None
+    except JWTError as e:
+        print("DEBUG: JWTError:", e)
+        return None
+
+    user = db.query(models.User).filter(models.User.id == int(user_id)).first()
+    print("DEBUG: found user =", user)
     return user
