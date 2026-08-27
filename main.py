@@ -418,3 +418,61 @@ def logout():
     response = RedirectResponse(url="/home", status_code=303)
     response.delete_cookie("access_token")
     return response
+
+#Φόρμα δημιουργίας Project
+@app.get("/create-project")
+def create_project_page(request: Request, db: Session = Depends(get_db)):
+    current_user = get_current_user_from_cookie(access_token=request.cookies.get("access_token"), db=db)
+    if not current_user:
+        return RedirectResponse(url="/login-page", status_code=303)
+
+    technologies = db.query(models.Technology).all()
+    return templates.TemplateResponse(request, "create_project.html", {
+        "current_user": current_user,
+        "technologies": technologies,
+    })
+
+@app.post("/create-project")
+def create_project_submit(
+    request: Request,
+    title: str = Form(...),
+    description: str = Form(""),
+    category: str = Form(...),
+    github_url: str = Form(""),
+    technology_ids:list[int] = Form([]),
+    image: UploadFile = File(None),
+    db: Session = Depends(get_db),
+):
+
+    current_user = get_current_user_from_cookie(access_token=request.cookies.get("access_token"),db=db)
+    if not current_user:
+        return RedirectResponse(url="/login-page", status_code=303)
+
+    db_project = models.Project(
+        title=title,
+        description= description,
+        category= category,
+        github_url= github_url,
+        owner_id=current_user.id,
+
+    )
+
+    if technology_ids:
+        technologies= db.query(models.Technology).filter(
+            models.Technology.id.in_(technology_ids)
+        ).all()
+        db_project.technologies = technologies
+
+    db.add(db_project)
+    db.commit()
+    db.refresh(db_project)
+
+    if image and image.filename:
+        allowrd_extensions = {".jpg", ".jpeg", ".png", ".webp"}
+        file_extension = os.path.splitext(image.filename)[1].lower()
+        if file_extension in allowrd_extensions:
+            image_url = upload_image_to_cloudinary(image.file, public_id=f"ydev/project_{db_project.id}")
+            db_project.image_url=image_url
+            db.commit()
+
+    return RedirectResponse(url=f"/project/{db_project.id}/page", status_code=303)

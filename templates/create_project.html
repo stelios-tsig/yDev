@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <title>Νέο Project — yDev</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="auth-card">
+        <h1>Δημιουργία Project</h1>
+
+        <form method="POST" action="/create-project" enctype="multipart/form-data">
+            <label for="title">Τίτλος</label>
+            <input type="text" id="title" name="title" required>
+
+            <label for="description">Περιγραφή</label>
+            <textarea id="description" name="description" rows="4"></textarea>
+
+            <label for="category">Κατηγορία</label>
+            <input type="text" id="category" name="category" required>
+
+            <label for="github_url">GitHub URL</label>
+            <input type="text" id="github_url" name="github_url">
+
+            <label>Τεχνολογίες</label>
+            <div class="tech-checkboxes">
+                {% for tech in technologies %}
+                    <label class="tech-checkbox">
+                        <input type="checkbox" name="technology_ids" value="{{ tech.id }}">
+                        {{ tech.name }}
+                    </label>
+                {% endfor %}
+            </div>
+
+            <label for="image">Εικόνα (προαιρετικό)</label>
+            <input type="file" id="image" name="image" accept="image/*">
+
+            <button type="submit">Δημιουργία</button>
+        </form>
+    </div>
+</body>
+</html>
