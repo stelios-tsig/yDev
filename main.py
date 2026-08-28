@@ -344,13 +344,14 @@ def project_detail_page(project_id: int, request: Request, db: Session = Depends
     versions = db.query(models.Version).filter(models.Version.project_id == project_id).all()
 
     average_rating = round(sum(r.stars for r in ratings) / len(ratings), 1) if ratings else None
-
+    current_user = get_current_user_from_cookie(access_token=request.cookies.get("access_token"),db=db)
     return templates.TemplateResponse(request, "project_detail.html", {
         "project": project,
         "comments": comments,
         "ratings": ratings,
         "versions": versions,
         "average_rating": average_rating,
+        "current_user": current_user,
     })
 
 #Εγγραφή χρήστη 
@@ -476,3 +477,61 @@ def create_project_submit(
             db.commit()
 
     return RedirectResponse(url=f"/project/{db_project.id}/page", status_code=303)
+
+#Φόρμα σχολίων στη σελίδα του project.
+@app.post("/project/{project_id}/comment-submit")
+def submit_comment_form(
+    project_id: int,
+    request: Request,
+    content: str = Form(...),
+    category: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    current_user = get_current_user_from_cookie(access_token= request.cookies.get("access_token"),db=db)
+    if not current_user:
+        return RedirectResponse(url="/login-page",status_code=303)
+
+    project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    db_comment = models.Comment(
+        content=content,
+        category= category,
+        project_id= project_id,
+        user_id = current_user.id,
+
+    )
+
+    db.add(db_comment)
+    db.commit()
+
+    return RedirectResponse(url=f"/project/{project_id}/page", status_code=303)
+
+#Φόρμα βαθμολόγησης
+
+@app.post("/project/{project_id}/rating-submit")
+def submit_rating_form(
+    project_id: int,
+    request: Request,
+    stars: int = Form(...),
+    db: Session = Depends(get_db),
+
+):
+    current_user = get_current_user_from_cookie(access_token=request.cookies.get("access_token"),db=db)
+    if not current_user:
+        return RedirectResponse(url="/login-page",status_code=303)
+    
+    project = db.query(models.Project).filter(models.Project.id ==project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    db_rating= models.Rating(stars=stars, project_id=project_id, user_id=current_user.id)
+    db.add(db_rating)
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+
+    return RedirectResponse(url=f"/project/{project_id}/page",status_code=303)

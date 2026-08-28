@@ -34,6 +34,22 @@
             {% else %}
                 — Δεν υπάρχουν ακόμα βαθμολογίες
             {% endif %}
+            
+            {% if current_user %}
+                <form method="POST" action="/project/{{ project.id }}/rating-submit" class="rating-form">
+                    <label>Βαθμολόγησε:</label>
+                    <div class ="star-radio">
+                        {%for i in range(1, 6) %}
+                            <label>
+                                <input type="radio" name="stars" value="{{ i }}" required> {{ i }}
+                            </label>
+                        {% endfor %}
+                    
+                    </div>
+                    <button type="submit">Υποβολή Βαθμολογίας </button>
+                </form>
+            {% endif %}
+
         </h2>
 
         <h2>Εκδόσεις</h2>
@@ -55,6 +71,28 @@
         {% else %}
             <p class="muted">Δεν υπάρχουν ακόμα σχόλια.</p>
         {% endfor %}
+        
+        {% if current_user %}
+            <h3>Πρόσθεσε σχόλιο</h3>
+            <form method="POST" action="/project/{{ project.id }}/comment-submit" class="comment-form">
+                <textarea name="content" rows="3" placeholder="Γράψε το σχόλιό σου..." required></textarea>
+
+                <select name="category" required>
+                    <option value="feature_idea">💡 Feature Idea</option>
+                    <option value="bug_report">🐛 Bug Report</option>
+                </select>
+
+                <button type="submit">Υποβολή</button>
+            </form>
+        {% else %}
+            <p class="muted"><a href="/login-page">Συνδέσου</a> για να αφήσεις σχόλιο.</p>
+        {% endif %}
+
+
+
+
+
+
     </div>
 </body>
 </html>

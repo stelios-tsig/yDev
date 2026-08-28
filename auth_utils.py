@@ -68,21 +68,21 @@ def get_current_user(token: str = Depends(oauth2_scheme), db:Session = Depends(g
 #Cookie
 
 def get_current_user_from_cookie(access_token: str = Cookie(None), db: Session = Depends(get_db)):
-    print("DEBUG: access_token =", access_token)
+    
     if access_token is None:
-        print("DEBUG: no token found")
+        
         return None
 
     try:
         payload = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: str = payload.get("sub")
-        print("DEBUG: decoded user_id =", user_id)
+        
         if user_id is None:
             return None
     except JWTError as e:
-        print("DEBUG: JWTError:", e)
+        
         return None
 
     user = db.query(models.User).filter(models.User.id == int(user_id)).first()
-    print("DEBUG: found user =", user)
+    
     return user
