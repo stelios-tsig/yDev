@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <title>Επεξεργασία σχολίου — yDev</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="auth-card">
+        <h1>Επεξεργασία σχολίου</h1>
+
+        <form method="POST" action="/comment/{{ comment.id }}/edit" class="comment-form">
+            <textarea name="content" rows="4" required>{{ comment.content }}</textarea>
+
+            <select name="category" required>
+                <option value="feature_idea" {% if comment.category == "feature_idea" %}selected{% endif %}>💡 Feature Idea</option>
+                <option value="bug_report" {% if comment.category == "bug_report" %}selected{% endif %}>🐛 Bug Report</option>
+            </select>
+
+            <button type="submit">Αποθήκευση</button>
+        </form>
+
+        <p class="muted"><a href="/project/{{ comment.project_id }}/page" class="back-link">← Πίσω στη δημοσίευση</a></p>
+    </div>
+</body>
+</html>

@@ -323,11 +323,34 @@ def delete_comment(
 
     project = db.query(models.Project).filter(models.Project.id == comment.project_id).first()
 
-    if comment.user_id != current_user.id and project.owner_id != current_user.id:
+    #Επιτρέπεται στον συντάκτη του σχολίου ή στον ιδιοκτήτη της δημοσίευσης.
+    if comment.user_id != current_user.id and (project is None or project.owner_id != current_user.id):
         raise HTTPException(status_code=403,detail="Not authorized to delete this comment")
 
     db.delete(comment)
     db.commit()
+
+
+#Επεξεργασία σχολίου (μόνο ο συντάκτης).
+@app.put("/comments/{comment_id}", response_model=schemas.Comment)
+def update_comment(
+    comment_id: int,
+    comment_update: schemas.CommentCreate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    comment = db.query(models.Comment).filter(models.Comment.id == comment_id).first()
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found")
+
+    if comment.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only the comment author can edit this comment")
+
+    comment.content = comment_update.content
+    comment.category = comment_update.category.value
+    db.commit()
+    db.refresh(comment)
+    return comment
 
 
 #PAGE description,comments,ratings,versions
@@ -634,3 +657,78 @@ def delete_project_submit(project_id: int, request: Request, db: Session = Depen
     db.commit()
 
     return RedirectResponse(url="/home", status_code=303)
+
+
+#Σχόλια — επεξεργασία / διαγραφή μέσα από τη σελίδα της δημοσίευσης
+#Επεξεργασία: μόνο ο συντάκτης του σχολίου.
+#Διαγραφή: ο συντάκτης του σχολίου Ή ο ιδιοκτήτης της δημοσίευσης.
+
+@app.get("/comment/{comment_id}/edit")
+def edit_comment_page(comment_id: int, request: Request, db: Session = Depends(get_db)):
+    current_user = get_current_user_from_cookie(access_token=request.cookies.get("access_token"), db=db)
+    if not current_user:
+        return RedirectResponse(url="/login-page", status_code=303)
+
+    comment = db.query(models.Comment).filter(models.Comment.id == comment_id).first()
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found")
+
+    if comment.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only the comment author can edit this comment")
+
+    return templates.TemplateResponse(request, "edit_comment.html", {
+        "comment": comment,
+    })
+
+
+@app.post("/comment/{comment_id}/edit")
+def edit_comment_submit(
+    comment_id: int,
+    request: Request,
+    content: str = Form(...),
+    category: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    current_user = get_current_user_from_cookie(access_token=request.cookies.get("access_token"), db=db)
+    if not current_user:
+        return RedirectResponse(url="/login-page", status_code=303)
+
+    comment = db.query(models.Comment).filter(models.Comment.id == comment_id).first()
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found")
+
+    if comment.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only the comment author can edit this comment")
+
+    try:
+        category_value = schemas.CommentCategory(category).value
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid comment category")
+
+    comment.content = content
+    comment.category = category_value
+    db.commit()
+
+    return RedirectResponse(url=f"/project/{comment.project_id}/page", status_code=303)
+
+
+@app.post("/comment/{comment_id}/delete")
+def delete_comment_submit(comment_id: int, request: Request, db: Session = Depends(get_db)):
+    current_user = get_current_user_from_cookie(access_token=request.cookies.get("access_token"), db=db)
+    if not current_user:
+        return RedirectResponse(url="/login-page", status_code=303)
+
+    comment = db.query(models.Comment).filter(models.Comment.id == comment_id).first()
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found")
+
+    project = db.query(models.Project).filter(models.Project.id == comment.project_id).first()
+
+    if comment.user_id != current_user.id and (project is None or project.owner_id != current_user.id):
+        raise HTTPException(status_code=403, detail="Not authorized to delete this comment")
+
+    project_id = comment.project_id
+    db.delete(comment)
+    db.commit()
+
+    return RedirectResponse(url=f"/project/{project_id}/page", status_code=303)

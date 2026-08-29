@@ -76,6 +76,18 @@
                     {%- endif -%}
                 </span>
                 <p>{{ comment.content }}</p>
+
+                {% if current_user and (current_user.id == comment.user_id or current_user.id == project.owner_id) %}
+                    <div class="comment-actions">
+                        {% if current_user.id == comment.user_id %}
+                            <a href="/comment/{{ comment.id }}/edit" class="edit-link">✏️ Επεξεργασία</a>
+                        {% endif %}
+                        <form method="POST" action="/comment/{{ comment.id }}/delete" class="inline-delete-form"
+                              onsubmit="return confirm('Σίγουρα θέλεις να διαγράψεις αυτό το σχόλιο;');">
+                            <button type="submit" class="link-button">🗑 Διαγραφή</button>
+                        </form>
+                    </div>
+                {% endif %}
             </div>
         {% else %}
             <p class="muted">Δεν υπάρχουν ακόμα σχόλια.</p>

@@ -278,3 +278,31 @@ textarea {
     text-decoration: none;
     font-weight: bold;
 }
+
+.comment-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 8px;
+    font-size: 0.9rem;
+}
+
+.inline-delete-form {
+    display: inline;
+    margin: 0;
+}
+
+.link-button {
+    background: none;
+    border: none;
+    padding: 0;
+    color: #ff8080;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.link-button:hover {
+    text-decoration: underline;
+}
