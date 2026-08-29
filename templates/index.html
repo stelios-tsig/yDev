@@ -8,7 +8,7 @@
 <body>
     <nav class="top-nav">
         {% if current_user %}
-            <a href="create-project">+ Νέο Project</a>
+            <a href="/create-project">+ Νέο Project</a>
             <span>Γεία σου, {{ current_user.username }}!</span>
             <a href="/logout">Αποσύνδεση</a>
         {% else %}

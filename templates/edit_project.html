@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <title>Επεξεργασία — {{ project.title }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="auth-card">
+        <h1>Επεξεργασία Project</h1>
+
+        <form method="POST" action="/project/{{ project.id }}/edit" enctype="multipart/form-data">
+            <label for="title">Τίτλος</label>
+            <input type="text" id="title" name="title" value="{{ project.title }}" required>
+
+            <label for="description">Περιγραφή</label>
+            <textarea id="description" name="description" rows="4">{{ project.description }}</textarea>
+
+            <label for="category">Κατηγορία</label>
+            <input type="text" id="category" name="category" value="{{ project.category }}" required>
+
+            <label for="github_url">GitHub URL</label>
+            <input type="text" id="github_url" name="github_url" value="{{ project.github_url }}">
+
+            <label>Τεχνολογίες</label>
+            <div class="tech-checkboxes">
+                {% for tech in technologies %}
+                    <label class="tech-checkbox">
+                        <input type="checkbox" name="technology_ids" value="{{ tech.id }}"
+                            {% if tech.id in selected_ids %}checked{% endif %}>
+                        {{ tech.name }}
+                    </label>
+                {% endfor %}
+            </div>
+
+            <button type="submit">Αποθήκευση</button>
+        </form>
+
+        <form method="POST" action="/project/{{ project.id }}/delete" class="delete-form"
+              onsubmit="return confirm('Σίγουρα θέλεις να διαγράψεις αυτό το project;');">
+            <button type="submit" class="delete-button">Διαγραφή Project</button>
+        </form>
+    </div>
+</body>
+</html>

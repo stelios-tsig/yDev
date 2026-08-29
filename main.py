@@ -2,7 +2,6 @@ from fastapi import FastAPI, Depends, UploadFile, File, HTTPException, Request ,
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.security import OAuth2PasswordRequestForm
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -10,7 +9,6 @@ from database import engine, get_db
 from typing import List
 from auth_utils import hash_password, create_access_token, verify_password, get_current_user, get_current_user_from_cookie
 import models
-import shutil
 import os
 import schemas
 from cloud_utils import upload_image_to_cloudinary
@@ -20,9 +18,13 @@ from cloud_utils import upload_image_to_cloudinary
 
 models.Base.metadata.create_all(bind=engine)
 
+#Ο φάκελος uploads πρέπει να υπάρχει πριν τον κάνουμε mount αλλιώς το StaticFiles ρίχνει σφάλμα στο startup.
+UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
 app = FastAPI()
 #Έυρεση αρχείου με το συγκεκριμένο όνομα στον φάκελο uploads.
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 #Ιδια λογική
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
@@ -96,7 +98,7 @@ def create_project(project: schemas.ProjectCreate, current_user: models.User = D
 
 #Ελεγχός Project
 #Το συγκεκριμένο GET πρέπει να λειτουργεί μετά το POST διότι η λειτουργία του γίνεται με αυτό και όχι παράλληλα.
-@app.get("/projects{project_id}", response_model= schemas.Project)
+@app.get("/projects/{project_id}", response_model= schemas.Project)
 def read_project(project_id: int, db: Session = Depends(get_db)):
     project = db.query(models.Project).filter(models.Project.id == project_id).first()
     if not project: #Εαν δεν υπάρχει πρότζεκτ
@@ -147,13 +149,13 @@ def create_comment(
 
 
 #Comments
-@app.get("/projects/{project_id}/comment/", response_model=List[schemas.Comment])
+@app.get("/projects/{project_id}/comments/", response_model=List[schemas.Comment])
 def read_comments(project_id: int, db: Session =Depends(get_db)):
     comments = db.query(models.Comment).filter(models.Comment.project_id == project_id).all()
     return comments
 
 #Rating
-@app.post("/projects/{project_id}/rating/", response_model=schemas.Rating)
+@app.post("/projects/{project_id}/ratings/", response_model=schemas.Rating)
 def create_rating(
     project_id: int,
     rating: schemas.RatingCreate,
@@ -191,7 +193,7 @@ def read_ratings(project_id: int, db: Session = Depends(get_db)):
 
 
 #Εκδοχες (versions)----------------------------
-@app.post("/project/{project_id}/version/", response_model=schemas.Version)
+@app.post("/projects/{project_id}/versions/", response_model=schemas.Version)
 def create_version(
     project_id: int,
     version: schemas.VersionCreate,
@@ -226,9 +228,6 @@ def read_versions(project_id: int, db: Session = Depends(get_db)):
 
 #UPLOAD PHOTOS--------------------------------------------------
 
-UPLOAD_DIR = "uploads"
-os.makedirs(UPLOAD_DIR, exist_ok= True)
-
 @app.post("/projects/{project_id}/upload-image/", response_model=schemas.Project)
 def upload_project_image(
     project_id: int,
@@ -259,7 +258,7 @@ def upload_project_image(
     return project        
 
 #PUT------------------------------------------------------
-@app.put("/project/{project_id}", response_model=schemas.Project)
+@app.put("/projects/{project_id}", response_model=schemas.Project)
 def update_project(
     project_id: int,
     project_update: schemas.ProjectCreate,
@@ -293,7 +292,7 @@ def update_project(
 
 
 #DELETE---------------------------------------------------
-@app.delete("/projects/{project}", status_code=204)
+@app.delete("/projects/{project_id}", status_code=204)
 def delete_project(
     project_id: int,
     current_user: models.User = Depends(get_current_user),
@@ -491,13 +490,18 @@ def submit_comment_form(
     if not current_user:
         return RedirectResponse(url="/login-page",status_code=303)
 
+    try:
+        category_value = schemas.CommentCategory(category).value
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid comment category")
+
     project = db.query(models.Project).filter(models.Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    
+
     db_comment = models.Comment(
         content=content,
-        category= category,
+        category= category_value,
         project_id= project_id,
         user_id = current_user.id,
 
@@ -521,13 +525,24 @@ def submit_rating_form(
     current_user = get_current_user_from_cookie(access_token=request.cookies.get("access_token"),db=db)
     if not current_user:
         return RedirectResponse(url="/login-page",status_code=303)
-    
+
+    if stars < 1 or stars > 5:
+        raise HTTPException(status_code=422, detail="Stars must be between 1 and 5")
+
     project = db.query(models.Project).filter(models.Project.id ==project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    db_rating= models.Rating(stars=stars, project_id=project_id, user_id=current_user.id)
-    db.add(db_rating)
+    #Εαν ο χρήστης έχει ήδη βαθμολογήσει, ενημερώνουμε την υπάρχουσα βαθμολογία.
+    existing_rating = db.query(models.Rating).filter(
+        models.Rating.project_id == project_id,
+        models.Rating.user_id == current_user.id,
+    ).first()
+
+    if existing_rating:
+        existing_rating.stars = stars
+    else:
+        db.add(models.Rating(stars=stars, project_id=project_id, user_id=current_user.id))
 
     try:
         db.commit()
@@ -535,3 +550,87 @@ def submit_rating_form(
         db.rollback()
 
     return RedirectResponse(url=f"/project/{project_id}/page",status_code=303)
+
+
+#Edit
+
+@app.get("/project/{project_id}/edit")
+def edit_project_page(project_id: int, request: Request, db: Session= Depends(get_db)):
+    current_user = get_current_user_from_cookie(access_token=request.cookies.get("access_token"), db=db)
+    if not current_user:
+        return RedirectResponse(url="/login-page", status_code=303)
+
+    project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if project.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only the owner can edit this project")
+
+    technologies = db.query(models.Technology).all()
+    selected_ids = {tech.id for tech in project.technologies}
+
+    return templates.TemplateResponse(request, "edit_project.html",{
+        "project": project,
+        "technologies": technologies,
+        "selected_ids" :selected_ids,
+    })
+
+@app.post("/project/{project_id}/edit")
+def edit_project_submit(
+    project_id:int,
+    request: Request,
+    title: str= Form(...),
+    description: str = Form(""),
+    category: str = Form(...),
+    github_url: str = Form(""),
+    technology_ids: list[int]= Form([]),
+    db: Session = Depends(get_db),
+):
+    current_user = get_current_user_from_cookie(access_token= request.cookies.get("access_token"),db=db)
+    if not current_user:
+        return RedirectResponse(url="/login-page",status_code=303)
+
+    project = db.query(models.Project).filter(models.Project.id== project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if project.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only the owner can edit this project")
+
+    project.title= title
+    project.description = description
+    project.category = category
+    project.github_url = github_url
+
+    if technology_ids:
+        technologies = db.query(models.Technology).filter(
+            models.Technology.id.in_(technology_ids)
+        ).all()
+        project.technologies = technologies
+    else:
+        project.technologies = []
+
+    db.commit()
+    return RedirectResponse(url=f"/project/{project_id}/page", status_code=303)
+
+#Edit (DELETE)
+
+@app.post("/project/{project_id}/delete")
+def delete_project_submit(project_id: int, request: Request, db: Session = Depends(get_db)):
+    current_user = get_current_user_from_cookie(access_token=request.cookies.get("access_token"), db=db)
+    if not current_user:
+        return RedirectResponse(url="/login-page", status_code=303)
+
+    project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if project.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only the owner can delete this project")
+
+
+    db.delete(project)
+    db.commit()
+
+    return RedirectResponse(url="/home", status_code=303)

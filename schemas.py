@@ -13,7 +13,7 @@ class Technology(TechnologyBase):
     id : int # Id του αντικειμένου που επιστρέφεται από την βάση δεδομένων.
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class UserBase(BaseModel): #Κλάση Β
     username: str
@@ -68,8 +68,12 @@ class VersionCreate(BaseModel):
     changelog: str | None = None
 
 class CommentCategory(str, Enum):
-    feature_idea = "Feature Idea"
-    bug_report = "Bug Report"
+    feature_idea = "feature_idea"
+    bug_report = "bug_report"
+
+    @property
+    def label(self) -> str:
+        return {"feature_idea": "Feature Idea", "bug_report": "Bug Report"}[self.value]
 
 class CommentBase(BaseModel):
     content: str

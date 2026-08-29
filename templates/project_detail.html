@@ -12,6 +12,10 @@
         <h1>{{ project.title }}</h1>
         <p class="muted">Δημιουργός: {{ project.owner.username }} · Κατηγορία: {{ project.category }}</p>
 
+        {% if current_user and current_user.id == project.owner_id %}
+            <p><a href="/project/{{ project.id }}/edit" class="edit-link">✏️ Επεξεργασία</a></p>
+        {% endif %}
+
         {% if project.image_url %}
             <img src="{{ project.image_url }}" alt="{{ project.title }}" class="detail-image">
         {% endif %}
@@ -38,7 +42,7 @@
             {% if current_user %}
                 <form method="POST" action="/project/{{ project.id }}/rating-submit" class="rating-form">
                     <label>Βαθμολόγησε:</label>
-                    <div class ="star-radio">
+                    <div class="star-radios">
                         {%for i in range(1, 6) %}
                             <label>
                                 <input type="radio" name="stars" value="{{ i }}" required> {{ i }}
@@ -65,7 +69,12 @@
         {% for comment in comments %}
             <div class="comment-item">
                 <strong>{{ comment.user.username }}</strong>
-                <span class="badge">{{ comment.category }}</span>
+                <span class="badge">
+                    {%- if comment.category == "feature_idea" -%}💡 Feature Idea
+                    {%- elif comment.category == "bug_report" -%}🐛 Bug Report
+                    {%- else -%}{{ comment.category }}
+                    {%- endif -%}
+                </span>
                 <p>{{ comment.content }}</p>
             </div>
         {% else %}

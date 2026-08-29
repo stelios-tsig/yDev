@@ -252,3 +252,29 @@ textarea {
     font-weight: bold;
     cursor: pointer;
 }
+
+.delete-form {
+    margin-top: 20px;
+}
+
+.delete-button {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ff6b6b;
+    border-radius: 8px;
+    background: transparent;
+    color: #ff6b6b;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.delete-button:hover {
+    background: #ff6b6b;
+    color: white;
+}
+
+.edit-link {
+    color: var(--warm-amber);
+    text-decoration: none;
+    font-weight: bold;
+}
