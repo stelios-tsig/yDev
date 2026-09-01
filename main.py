@@ -5,7 +5,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from database import engine, get_db
+from database import get_db
 from typing import List
 from auth_utils import hash_password, create_access_token, verify_password, get_current_user, get_current_user_from_cookie
 import models
@@ -14,9 +14,8 @@ import schemas
 from cloud_utils import upload_image_to_cloudinary
 
 
-
-
-models.Base.metadata.create_all(bind=engine)
+# Το schema της βάσης το διαχειρίζεται πλέον το Alembic (alembic upgrade head).
+# Γι' αυτό δεν καλούμε models.Base.metadata.create_all εδώ.
 
 #Ο φάκελος uploads πρέπει να υπάρχει πριν τον κάνουμε mount αλλιώς το StaticFiles ρίχνει σφάλμα στο startup.
 UPLOAD_DIR = "uploads"
