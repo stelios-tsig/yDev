@@ -11,7 +11,7 @@
 
     <div class="detail-card">
         <h1>{{ project.title }}</h1>
-        <p class="muted">Δημιουργός: {{ project.owner.username }} · Κατηγορία: {{ project.category }}</p>
+        <p class="muted">Δημιουργός: <a href="/user/{{ project.owner.id }}/page">{{ project.owner.username }}</a> · Κατηγορία: {{ project.category }}</p>
 
         {% if current_user and current_user.id == project.owner_id %}
             <p><a href="/project/{{ project.id }}/edit" class="edit-link">✏️ Επεξεργασία</a></p>

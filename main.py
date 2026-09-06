@@ -227,6 +227,24 @@ def read_versions(project_id: int, db: Session = Depends(get_db)):
 
 #UPLOAD PHOTOS--------------------------------------------------
 
+ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024  # 5MB
+
+
+def validate_image_upload(file: UploadFile) -> None:
+    file_extension = os.path.splitext(file.filename)[1].lower()
+    if file_extension not in ALLOWED_IMAGE_EXTENSIONS:
+        raise HTTPException(status_code=400, detail="Invalid file type")
+
+    #Το UploadFile.file είναι ένα seekable αρχείο· βρίσκουμε το μέγεθος
+    #χωρίς να διαβάσουμε ολόκληρο το περιεχόμενο στη μνήμη.
+    file.file.seek(0, os.SEEK_END)
+    size = file.file.tell()
+    file.file.seek(0)
+    if size > MAX_IMAGE_SIZE_BYTES:
+        raise HTTPException(status_code=400, detail="Image must be smaller than 5MB")
+
+
 @app.post("/projects/{project_id}/upload-image/", response_model=schemas.Project)
 def upload_project_image(
     project_id: int,
@@ -242,12 +260,9 @@ def upload_project_image(
     if project.owner_id != current_user.id:
         raise HTTPException(status_code=403, detail="Only the project owner can upload images")
 
-    allowed_extensions = {".jpg", ".jpeg", ".png", ".webp"}
-    file_extension = os.path.splitext(file.filename)[1].lower()
-    if file_extension not in allowed_extensions:
-        raise HTTPException(status_code=400, detail="Invalid file type")
-#V2.0 
-#Προηγούμενη έκδοση 
+    validate_image_upload(file)
+#V2.0
+#Προηγούμενη έκδοση
     image_url = upload_image_to_cloudinary(file.file,public_id=f"ydev/project_{project_id}")
     project.image_url = image_url
 
@@ -490,12 +505,10 @@ def create_project_submit(
     db.refresh(db_project)
 
     if image and image.filename:
-        allowrd_extensions = {".jpg", ".jpeg", ".png", ".webp"}
-        file_extension = os.path.splitext(image.filename)[1].lower()
-        if file_extension in allowrd_extensions:
-            image_url = upload_image_to_cloudinary(image.file, public_id=f"ydev/project_{db_project.id}")
-            db_project.image_url=image_url
-            db.commit()
+        validate_image_upload(image)
+        image_url = upload_image_to_cloudinary(image.file, public_id=f"ydev/project_{db_project.id}")
+        db_project.image_url=image_url
+        db.commit()
 
     return RedirectResponse(url=f"/project/{db_project.id}/page", status_code=303)
 
@@ -731,3 +744,48 @@ def delete_comment_submit(comment_id: int, request: Request, db: Session = Depen
     db.commit()
 
     return RedirectResponse(url=f"/project/{project_id}/page", status_code=303)
+
+
+#Προφίλ χρήστη (δημόσιο) + επεξεργασία bio (μόνο ο ίδιος ο χρήστης)
+
+@app.get("/user/{user_id}/page")
+def user_profile_page(user_id: int, request: Request, db: Session = Depends(get_db)):
+    profile_user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not profile_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    projects = db.query(models.Project).filter(models.Project.owner_id == user_id).order_by(models.Project.id.desc()).all()
+    current_user = get_current_user_from_cookie(access_token=request.cookies.get("access_token"), db=db)
+
+    return templates.TemplateResponse(request, "user_profile.html", {
+        "profile_user": profile_user,
+        "projects": projects,
+        "current_user": current_user,
+    })
+
+
+@app.get("/profile/edit")
+def edit_profile_page(request: Request, db: Session = Depends(get_db)):
+    current_user = get_current_user_from_cookie(access_token=request.cookies.get("access_token"), db=db)
+    if not current_user:
+        return RedirectResponse(url="/login-page", status_code=303)
+
+    return templates.TemplateResponse(request, "edit_profile.html", {
+        "current_user": current_user,
+    })
+
+
+@app.post("/profile/edit")
+def edit_profile_submit(
+    request: Request,
+    bio: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    current_user = get_current_user_from_cookie(access_token=request.cookies.get("access_token"), db=db)
+    if not current_user:
+        return RedirectResponse(url="/login-page", status_code=303)
+
+    current_user.bio = bio or None
+    db.commit()
+
+    return RedirectResponse(url=f"/user/{current_user.id}/page", status_code=303)

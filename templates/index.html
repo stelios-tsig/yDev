@@ -10,7 +10,7 @@
     <nav class="top-nav">
         {% if current_user %}
             <a href="/create-project">+ Νέο Project</a>
-            <span>Γεία σου, {{ current_user.username }}!</span>
+            <a href="/user/{{ current_user.id }}/page">Γεία σου, {{ current_user.username }}!</a>
             <a href="/logout">Αποσύνδεση</a>
         {% else %}
             <a href="/login-page">Σύνδεση</a>

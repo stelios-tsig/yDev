@@ -27,6 +27,7 @@ class UserCreate(UserBase):
 
 class User(UserBase):
     id: int
+    bio: str | None = None
 
     class Config:
         from_attributes = True  # Επιτρέπει την μετατροπή από SQLAlchemy μοντέλα σε Pydantic μοντέλα.

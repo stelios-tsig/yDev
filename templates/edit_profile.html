@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <title>Επεξεργασία προφίλ — yDev</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="/static/theme.js"></script>
+</head>
+<body>
+    <div class="auth-card">
+        <h1>Επεξεργασία προφίλ</h1>
+
+        <form method="POST" action="/profile/edit">
+            <label for="bio">Βιογραφικό</label>
+            <textarea id="bio" name="bio" rows="5" placeholder="Πες μας λίγα λόγια για σένα...">{{ current_user.bio or "" }}</textarea>
+
+            <button type="submit">Αποθήκευση</button>
+        </form>
+
+        <p class="muted"><a href="/user/{{ current_user.id }}/page" class="back-link">← Πίσω στο προφίλ</a></p>
+    </div>
+</body>
+</html>
