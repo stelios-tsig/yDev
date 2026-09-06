@@ -18,6 +18,32 @@
         {% endif %}
     </nav>
     <h1>yDev - Projects</h1>
+
+    <form method="GET" action="/home" class="filter-bar">
+        <input type="text" name="q" value="{{ q }}" placeholder="Αναζήτηση σε τίτλο...">
+
+        <select name="category">
+            <option value="">Όλες οι κατηγορίες</option>
+            {% for cat in categories %}
+                <option value="{{ cat }}" {% if cat == selected_category %}selected{% endif %}>{{ cat }}</option>
+            {% endfor %}
+        </select>
+
+        <select name="tech">
+            <option value="">Όλες οι τεχνολογίες</option>
+            {% for t in technologies %}
+                <option value="{{ t.id }}" {% if selected_tech and t.id == selected_tech %}selected{% endif %}>{{ t.name }}</option>
+            {% endfor %}
+        </select>
+
+        <button type="submit">Φιλτράρισμα</button>
+        {% if q or selected_category or selected_tech %}
+            <a href="/home" class="clear-filters">Καθαρισμός</a>
+        {% endif %}
+    </form>
+
+    <p class="muted results-count">{{ total }} project{{ '' if total == 1 else 's' }}{% if total_pages > 1 %} · σελίδα {{ page }} από {{ total_pages }}{% endif %}</p>
+
     <div class="project-list">
         {% for project in projects %}
             <div class="project-card">
@@ -37,9 +63,17 @@
                 </p>
             </div>
         {% else %}
-            <p> Δεν υπάρχουν ακόμα projects.</p>
+            <p> Δεν βρέθηκαν projects{% if q or selected_category or selected_tech %} με αυτά τα φίλτρα{% endif %}.</p>
         {% endfor %}
     </div>
+
+    {% if total_pages > 1 %}
+        <div class="pagination">
+            {% if prev_url %}<a href="{{ prev_url }}">← Προηγούμενη</a>{% else %}<span class="disabled">← Προηγούμενη</span>{% endif %}
+            <span>{{ page }} / {{ total_pages }}</span>
+            {% if next_url %}<a href="{{ next_url }}">Επόμενη →</a>{% else %}<span class="disabled">Επόμενη →</span>{% endif %}
+        </div>
+    {% endif %}
 </body>
 </html>
 

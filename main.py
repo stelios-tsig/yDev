@@ -11,6 +11,7 @@ from auth_utils import hash_password, create_access_token, verify_password, get_
 import models
 import os
 import schemas
+from urllib.parse import urlencode
 from cloud_utils import upload_image_to_cloudinary
 
 
@@ -440,14 +441,72 @@ def login_page_submit(
 
 #Εμφάνιση σύνδεσης
 
+PROJECTS_PER_PAGE = 9
+
+
 @app.get("/home")
-def home(request: Request, db: Session = Depends(get_db)):
-    projects = db.query(models.Project).order_by(models.Project.id.desc()).all()
+def home(
+    request: Request,
+    q: str = "",
+    category: str = "",
+    tech: int | None = None,
+    page: int = 1,
+    db: Session = Depends(get_db),
+):
+    q = q.strip()
+    category = category.strip()
+
+    query = db.query(models.Project)
+    if q:
+        query = query.filter(models.Project.title.ilike(f"%{q}%"))
+    if category:
+        query = query.filter(models.Project.category == category)
+    if tech:
+        query = query.filter(models.Project.technologies.any(models.Technology.id == tech))
+
+    total = query.count()
+    total_pages = max((total + PROJECTS_PER_PAGE - 1) // PROJECTS_PER_PAGE, 1)
+    page = min(max(page, 1), total_pages)
+
+    projects = (
+        query.order_by(models.Project.id.desc())
+        .offset((page - 1) * PROJECTS_PER_PAGE)
+        .limit(PROJECTS_PER_PAGE)
+        .all()
+    )
+
+    #Επιλογές για τα dropdown φίλτρα.
+    categories = [
+        row[0]
+        for row in db.query(models.Project.category).distinct().order_by(models.Project.category).all()
+        if row[0]
+    ]
+    technologies = db.query(models.Technology).order_by(models.Technology.name).all()
+
+    #Links pagination που κρατάνε τα ενεργά φίλτρα.
+    active_filters = {k: v for k, v in (("q", q), ("category", category), ("tech", tech)) if v}
+
+    def page_url(target_page: int) -> str:
+        return "/home?" + urlencode({**active_filters, "page": target_page})
+
+    prev_url = page_url(page - 1) if page > 1 else None
+    next_url = page_url(page + 1) if page < total_pages else None
+
     current_user = get_current_user_from_cookie(access_token=request.cookies.get("access_token"), db=db)
     return templates.TemplateResponse(
         request, "index.html", {
         "projects": projects,
         "current_user": current_user,
+        "categories": categories,
+        "technologies": technologies,
+        "q": q,
+        "selected_category": category,
+        "selected_tech": tech,
+        "page": page,
+        "total_pages": total_pages,
+        "total": total,
+        "prev_url": prev_url,
+        "next_url": next_url,
     })
 
 @app.get("/logout")

@@ -307,6 +307,75 @@ textarea {
     text-decoration: underline;
 }
 
+/* ===== Φίλτρα & pagination στη λίστα projects ===== */
+.filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    max-width: 1200px;
+    margin: 0 auto 12px;
+}
+
+.filter-bar input,
+.filter-bar select {
+    padding: 9px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-light);
+    font-family: inherit;
+}
+
+.filter-bar input {
+    min-width: 220px;
+}
+
+.filter-bar button {
+    padding: 9px 16px;
+    border: none;
+    border-radius: 8px;
+    background: var(--sunset-orange);
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.filter-bar button:hover {
+    background: var(--warm-amber);
+}
+
+.filter-bar .clear-filters {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+.results-count {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.pagination {
+    display: flex;
+    gap: 18px;
+    align-items: center;
+    justify-content: center;
+    max-width: 1200px;
+    margin: 28px auto 0;
+}
+
+.pagination a {
+    color: var(--text-light);
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.pagination .disabled {
+    opacity: 0.4;
+}
+
 /* ===== Κουμπί εναλλαγής θέματος ===== */
 #theme-toggle {
     position: fixed;
