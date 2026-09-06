@@ -29,6 +29,16 @@ uvicorn main:app --reload
 
 Άνοιξε το `http://127.0.0.1:8000/home`.
 
+## Tests
+
+```bash
+pytest
+```
+
+Τα tests ([`tests/`](tests/)) τρέχουν με FastAPI `TestClient` πάνω σε απομονωμένη
+προσωρινή SQLite βάση (ορίζεται από το `tests/conftest.py` πριν φορτωθεί το app),
+οπότε δεν αγγίζουν την πραγματική βάση ούτε το Cloudinary.
+
 ## Migrations (Alembic)
 
 Το schema της βάσης το διαχειρίζεται αποκλειστικά το Alembic — το app δεν κάνει πλέον `create_all` στο startup.
@@ -55,6 +65,7 @@ alembic current                               # ποιο migration «βλέπε�
 | `alembic/` | Migrations βάσης δεδομένων |
 | `templates/` | Jinja2 templates |
 | `static/` | CSS / JS |
+| `tests/` | pytest suite (TestClient + SQLite) |
 
 ## Συμβάσεις URL
 

@@ -4,3 +4,4 @@ __pycache__/
 ydev.db
 .env
 uploads/
+.pytest_cache/
