@@ -10,9 +10,12 @@ from typing import List
 from auth_utils import hash_password, create_access_token, verify_password, get_current_user, get_current_user_from_cookie
 import models
 import os
+import secrets
 import schemas
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode
 from cloud_utils import upload_image_to_cloudinary
+from email_utils import send_email
 
 
 # Το schema της βάσης το διαχειρίζεται πλέον το Alembic (alembic upgrade head).
@@ -848,3 +851,101 @@ def edit_profile_submit(
     db.commit()
 
     return RedirectResponse(url=f"/user/{current_user.id}/page", status_code=303)
+
+
+#Επαναφορά κωδικού ("ξέχασα τον κωδικό")
+
+PASSWORD_RESET_TTL_HOURS = 1
+
+
+def _valid_reset_token(token_str: str, db: Session) -> models.PasswordResetToken | None:
+    token = db.query(models.PasswordResetToken).filter(
+        models.PasswordResetToken.token == token_str
+    ).first()
+    if not token or token.used:
+        return None
+
+    expires_at = token.expires_at
+    if expires_at.tzinfo is None:  # SQLite επιστρέφει naive datetimes
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if expires_at < datetime.now(timezone.utc):
+        return None
+
+    return token
+
+
+@app.get("/forgot-password")
+def forgot_password_page(request: Request):
+    return templates.TemplateResponse(request, "forgot_password.html", {})
+
+
+@app.post("/forgot-password")
+def forgot_password_submit(request: Request, email: str = Form(...), db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.email == email).first()
+
+    #Αν ο χρήστης υπάρχει, φτιάχνουμε token και στέλνουμε email. Σε κάθε
+    #περίπτωση δείχνουμε το ίδιο μήνυμα ώστε να μην αποκαλύπτουμε ποια emails
+    #είναι εγγεγραμμένα (user enumeration).
+    if user:
+        reset = models.PasswordResetToken(
+            token=secrets.token_urlsafe(32),
+            user_id=user.id,
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=PASSWORD_RESET_TTL_HOURS),
+        )
+        db.add(reset)
+        db.commit()
+
+        reset_link = f"{request.base_url}reset-password/{reset.token}"
+        send_email(
+            to=user.email,
+            subject="yDev — Επαναφορά κωδικού",
+            body=(
+                f"Γεια σου {user.username},\n\n"
+                f"Ζητήθηκε επαναφορά κωδικού για τον λογαριασμό σου. Άνοιξε τον παρακάτω σύνδεσμο "
+                f"για να ορίσεις νέο κωδικό (λήγει σε {PASSWORD_RESET_TTL_HOURS} ώρα):\n\n"
+                f"{reset_link}\n\n"
+                f"Αν δεν το ζήτησες εσύ, αγνόησε αυτό το email."
+            ),
+        )
+
+    return templates.TemplateResponse(
+        request, "forgot_password.html",
+        {"message": "Αν υπάρχει λογαριασμός με αυτό το email, στάλθηκε σύνδεσμος επαναφοράς."},
+    )
+
+
+@app.get("/reset-password/{token}")
+def reset_password_page(token: str, request: Request, db: Session = Depends(get_db)):
+    valid = _valid_reset_token(token, db) is not None
+    return templates.TemplateResponse(
+        request, "reset_password.html",
+        {"token": token, "valid": valid},
+    )
+
+
+@app.post("/reset-password/{token}")
+def reset_password_submit(
+    token: str,
+    request: Request,
+    password: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    reset = _valid_reset_token(token, db)
+    if not reset:
+        return templates.TemplateResponse(
+            request, "reset_password.html",
+            {"token": token, "valid": False},
+        )
+
+    if len(password) < 6:
+        return templates.TemplateResponse(
+            request, "reset_password.html",
+            {"token": token, "valid": True, "error": "Ο κωδικός πρέπει να έχει τουλάχιστον 6 χαρακτήρες."},
+        )
+
+    user = db.query(models.User).filter(models.User.id == reset.user_id).first()
+    user.hashed_password = hash_password(password)
+    reset.used = True
+    db.commit()
+
+    return RedirectResponse(url="/login-page", status_code=303)

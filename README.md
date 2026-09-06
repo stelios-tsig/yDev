@@ -7,7 +7,7 @@
 
 - **FastAPI** + **Jinja2** templates (server-side rendering)
 - **SQLAlchemy** + **Alembic** migrations, πάνω σε **PostgreSQL** (production, π.χ. Neon) με fallback σε τοπικό **SQLite** (`ydev.db`) όταν λείπει το `DATABASE_URL`
-- Authentication με **JWT** σε httponly cookie
+- Authentication με **JWT** σε httponly cookie· επαναφορά κωδικού μέσω email (SMTP)
 - **Cloudinary** για αποθήκευση εικόνων
 
 ## Εγκατάσταση
@@ -60,6 +60,7 @@ alembic current                               # ποιο migration «βλέπε�
 | `models.py` | SQLAlchemy μοντέλα |
 | `schemas.py` | Pydantic schemas |
 | `auth_utils.py` | Hashing κωδικών, δημιουργία/έλεγχος JWT |
+| `email_utils.py` | Αποστολή email (console σε dev, SMTP αν οριστεί) |
 | `database.py` | Engine και session της βάσης |
 | `cloud_utils.py` | Ανέβασμα εικόνων στο Cloudinary |
 | `alembic/` | Migrations βάσης δεδομένων |
