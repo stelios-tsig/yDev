@@ -83,7 +83,8 @@ alembic current                               # ποιο migration «βλέπε�
 | `models.py` | SQLAlchemy μοντέλα |
 | `schemas.py` | Pydantic schemas |
 | `auth_utils.py` | Hashing κωδικών, δημιουργία/έλεγχος JWT |
-| `email_utils.py` | Αποστολή email (console σε dev, SMTP αν οριστεί) |
+| `email_utils.py` | Αποστολή email (Resend > SMTP > console) |
+| `rate_limit.py` | In-memory rate limiting στα auth endpoints |
 | `database.py` | Engine και session της βάσης |
 | `cloud_utils.py` | Ανέβασμα εικόνων στο Cloudinary |
 | `alembic/` | Migrations βάσης δεδομένων |
