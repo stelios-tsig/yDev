@@ -66,6 +66,12 @@ alembic current                               # ποιο migration «βλέπε�
 (HTTP API). Τοπικά μπορείς να χρησιμοποιήσεις είτε `RESEND_API_KEY` είτε `SMTP_*`
 (π.χ. Gmail app password) — δες [`.env.example`](.env.example).
 
+> **Παράδοση email (demo):** το Resend, χωρίς verified domain, στέλνει μόνο στη
+> διεύθυνση του ιδιοκτήτη του λογαριασμού. Στο deployed demo, ο σύνδεσμος
+> επαναφοράς κωδικού γράφεται στα logs του Render αντί να σταλεί email. Για
+> κανονική παράδοση σε οποιονδήποτε χρήστη χρειάζεται domain επιβεβαιωμένο στο
+> Resend και `EMAIL_FROM=noreply@to-domain-sou.com`.
+
 > Το `DATABASE_URL` πρέπει να είναι σκέτο connection string που ξεκινά με
 > `postgresql://` — όχι η εντολή `psql '...'` που δείχνει το Neon, ούτε με εισαγωγικά.
 
