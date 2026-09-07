@@ -35,6 +35,21 @@ app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
+# Το cookie του JWT. SameSite=Lax μπλοκάρει cross-site POST (βασική προστασία
+# CSRF). Secure μόνο σε production (HTTPS) — τοπικά μέσω http θα έσπαγε το login.
+COOKIE_SECURE = os.getenv("COOKIE_SECURE", "false").lower() == "true"
+
+
+def set_auth_cookie(response, token: str) -> None:
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        samesite="lax",
+        secure=COOKIE_SECURE,
+        max_age=1800,
+    )
+
 
 def normalize_email(value: str) -> str:
     """Τα emails αποθηκεύονται/συγκρίνονται πάντα πεζά και χωρίς κενά."""
@@ -463,7 +478,7 @@ def login_page_submit(
     access_token = create_access_token(data={"sub": str(user.id)})
 
     response = RedirectResponse(url="/home", status_code=303)
-    response.set_cookie(key="access_token", value=access_token, httponly=True, max_age=1800)
+    set_auth_cookie(response, access_token)
     return response
 
 #Εμφάνιση σύνδεσης
@@ -539,7 +554,7 @@ def home(
 @app.get("/logout")
 def logout():
     response = RedirectResponse(url="/home", status_code=303)
-    response.delete_cookie("access_token")
+    response.delete_cookie("access_token", samesite="lax", secure=COOKIE_SECURE)
     return response
 
 #Φόρμα δημιουργίας Project

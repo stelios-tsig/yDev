@@ -29,6 +29,14 @@ def test_login_sets_cookie_and_redirects_home(client):
     assert resp.cookies.get("access_token")
 
 
+def test_login_cookie_is_httponly_and_samesite_lax(client):
+    client.post("/register", data={"username": "cookie", "email": "cookie@example.com", "password": "pw123456"})
+    resp = client.post("/login-page", data={"username": "cookie", "password": "pw123456"}, follow_redirects=False)
+    set_cookie = resp.headers["set-cookie"].lower()
+    assert "httponly" in set_cookie
+    assert "samesite=lax" in set_cookie
+
+
 def test_login_wrong_password_shows_error(client):
     client.post("/register", data={"username": "dave", "email": "dave@example.com", "password": "pw123456"})
     resp = client.post("/login-page", data={"username": "dave", "password": "wrong"})
