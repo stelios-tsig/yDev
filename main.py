@@ -3,6 +3,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.responses import RedirectResponse
+from fastapi.exception_handlers import http_exception_handler
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -37,6 +39,19 @@ templates = Jinja2Templates(directory="templates")
 def normalize_email(value: str) -> str:
     """Τα emails αποθηκεύονται/συγκρίνονται πάντα πεζά και χωρίς κενά."""
     return value.strip().lower()
+
+
+@app.exception_handler(StarletteHTTPException)
+async def html_error_handler(request: Request, exc: StarletteHTTPException):
+    """Για αιτήματα browser (403/404), δείξε σελίδα αντί για raw JSON."""
+    wants_html = "text/html" in request.headers.get("accept", "")
+    if exc.status_code in (403, 404) and wants_html:
+        return templates.TemplateResponse(
+            request, "error.html",
+            {"status_code": exc.status_code, "detail": exc.detail},
+            status_code=exc.status_code,
+        )
+    return await http_exception_handler(request, exc)
 
 
 #Ελεγχος διπλότυπου email---------------------------------------------------

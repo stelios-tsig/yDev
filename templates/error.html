@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ status_code }} — yDev</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="/static/theme.js"></script>
+</head>
+<body>
+    <div class="auth-card">
+        <h1>{{ status_code }}</h1>
+        <p class="muted">
+            {% if status_code == 404 %}
+                Η σελίδα που ζήτησες δεν βρέθηκε.
+            {% elif status_code == 403 %}
+                Δεν έχεις πρόσβαση σε αυτή τη σελίδα.
+            {% else %}
+                {{ detail }}
+            {% endif %}
+        </p>
+        <p class="muted"><a href="/home">← Πίσω στην αρχική</a></p>
+    </div>
+</body>
+</html>
