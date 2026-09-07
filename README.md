@@ -59,8 +59,12 @@ alembic current                               # ποιο migration «βλέπε�
 και το app ξεκινά με `uvicorn main:app --host 0.0.0.0 --port $PORT`.
 
 Πριν το πρώτο deploy όρισε στο **Environment**: `DATABASE_URL` (Neon), `CLOUDINARY_*`
-και `SMTP_*`. Το `SECRET_KEY` δημιουργείται αυτόματα. Η έκδοση Python ορίζεται στο
-[`.python-version`](.python-version).
+και `RESEND_API_KEY`. Το `SECRET_KEY` δημιουργείται αυτόματα. Η έκδοση Python ορίζεται
+στο [`.python-version`](.python-version).
+
+Το Render μπλοκάρει το εξερχόμενο SMTP, οπότε τα emails φεύγουν μέσω **Resend**
+(HTTP API). Τοπικά μπορείς να χρησιμοποιήσεις είτε `RESEND_API_KEY` είτε `SMTP_*`
+(π.χ. Gmail app password) — δες [`.env.example`](.env.example).
 
 > Το `DATABASE_URL` πρέπει να είναι σκέτο connection string που ξεκινά με
 > `postgresql://` — όχι η εντολή `psql '...'` που δείχνει το Neon, ούτε με εισαγωγικά.
