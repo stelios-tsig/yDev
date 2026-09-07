@@ -3,6 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.responses import RedirectResponse
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from database import get_db
@@ -32,17 +33,24 @@ app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
+
+def normalize_email(value: str) -> str:
+    """Τα emails αποθηκεύονται/συγκρίνονται πάντα πεζά και χωρίς κενά."""
+    return value.strip().lower()
+
+
 #Ελεγχος διπλότυπου email---------------------------------------------------
 
 @app.post("/users/", response_model=schemas.User)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    existing_user = db.query(models.User).filter(models.User.email == user.email).first()
+    email = normalize_email(user.email)
+    existing_user = db.query(models.User).filter(models.User.email == email).first()
     if existing_user:
         raise HTTPException(status_code=400, detail= "Email already registered")
     hashed_pw = hash_password(user.password)
     db_user= models.User(
         username=user.username,
-        email=user.email,
+        email=email,
         hashed_password= hashed_pw,
     )
 
@@ -407,10 +415,11 @@ def register_submit(
     db: Session = Depends(get_db),
 ):
 
+    email = normalize_email(email)
     existing_user = db.query(models.User).filter(models.User.email == email).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
-    
+
     hashed_pw = hash_password(password)
     db_user = models.User(username=username, email=email, hashed_password= hashed_pw)
     db.add(db_user)
@@ -881,7 +890,9 @@ def forgot_password_page(request: Request):
 
 @app.post("/forgot-password")
 def forgot_password_submit(request: Request, email: str = Form(...), db: Session = Depends(get_db)):
-    user = db.query(models.User).filter(models.User.email == email).first()
+    email = normalize_email(email)
+    # func.lower ώστε να ταιριάζει και με παλιές εγγραφές που αποθηκεύτηκαν με κεφαλαία.
+    user = db.query(models.User).filter(func.lower(models.User.email) == email).first()
 
     #Αν ο χρήστης υπάρχει, φτιάχνουμε token και στέλνουμε email. Σε κάθε
     #περίπτωση δείχνουμε το ίδιο μήνυμα ώστε να μην αποκαλύπτουμε ποια emails

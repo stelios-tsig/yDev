@@ -50,6 +50,28 @@ def test_create_project_page_requires_login(client):
     assert resp.headers["location"] == "/login-page"
 
 
+def test_register_normalises_email_case(client):
+    client.post(
+        "/register",
+        data={"username": "mixed", "email": "  MiXeD@Example.COM ", "password": "pw123456"},
+    )
+    from database import SessionLocal
+    import models
+
+    db = SessionLocal()
+    try:
+        user = db.query(models.User).filter(models.User.username == "mixed").first()
+        assert user.email == "mixed@example.com"
+    finally:
+        db.close()
+
+
+def test_duplicate_email_check_is_case_insensitive(client):
+    client.post("/register", data={"username": "a1", "email": "dup2@example.com", "password": "pw123456"})
+    resp = client.post("/register", data={"username": "a2", "email": "DUP2@EXAMPLE.COM", "password": "pw123456"})
+    assert resp.status_code == 400
+
+
 def test_json_create_user_hashes_password(client):
     resp = client.post(
         "/users/",
