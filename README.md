@@ -59,8 +59,11 @@ alembic current                               # ποιο migration «βλέπε�
 και το app ξεκινά με `uvicorn main:app --host 0.0.0.0 --port $PORT`.
 
 Πριν το πρώτο deploy όρισε στο **Environment**: `DATABASE_URL` (Neon), `CLOUDINARY_*`
-και `SMTP_*`. Το `SECRET_KEY` δημιουργείται αυτόματα. Η έκδοση Python καρφώνεται
-στο [`runtime.txt`](runtime.txt).
+και `SMTP_*`. Το `SECRET_KEY` δημιουργείται αυτόματα. Η έκδοση Python ορίζεται στο
+[`.python-version`](.python-version).
+
+> Το `DATABASE_URL` πρέπει να είναι σκέτο connection string που ξεκινά με
+> `postgresql://` — όχι η εντολή `psql '...'` που δείχνει το Neon, ούτε με εισαγωγικά.
 
 ## Δομή
 

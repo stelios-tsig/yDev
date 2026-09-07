@@ -4,11 +4,18 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
-SQLACHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./ydev.db")
-if SQLACHEMY_DATABASE_URL.startswith("sqlite"):
-    engine = create_engine(SQLACHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+
+# `or` (όχι το default του getenv) ώστε και ένα ΚΕΝΟ string να πέφτει στο fallback.
+SQLALCHEMY_DATABASE_URL = (os.getenv("DATABASE_URL") or "sqlite:///./ydev.db").strip().strip('"').strip("'")
+
+# Μερικοί providers (Neon, Heroku) δίνουν "postgres://" — το SQLAlchemy θέλει "postgresql://".
+if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
+    SQLALCHEMY_DATABASE_URL = "postgresql://" + SQLALCHEMY_DATABASE_URL[len("postgres://"):]
+
+if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 else:
-    engine = create_engine(SQLACHEMY_DATABASE_URL)
+    engine = create_engine(SQLALCHEMY_DATABASE_URL)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine) # παράγει μια νέα συνεδρία βάσης δεδομένων
 
@@ -22,5 +29,3 @@ def get_db():
 
     finally:
         db.close() # Το sesion κλείνει μετά την ολοκλήρωση της χρήσης του.
-
-        
