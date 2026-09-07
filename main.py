@@ -990,3 +990,37 @@ def reset_password_submit(
     db.commit()
 
     return RedirectResponse(url="/login-page", status_code=303)
+
+
+#Διαχείριση τεχνολογιών (κοινή ταξινομία — κάθε συνδεδεμένος χρήστης μπορεί να προσθέσει)
+
+@app.get("/technologies-page")
+def technologies_page(request: Request, db: Session = Depends(get_db)):
+    current_user = get_current_user_from_cookie(access_token=request.cookies.get("access_token"), db=db)
+    if not current_user:
+        return RedirectResponse(url="/login-page", status_code=303)
+
+    technologies = db.query(models.Technology).order_by(models.Technology.name).all()
+    return templates.TemplateResponse(request, "technologies.html", {
+        "current_user": current_user,
+        "technologies": technologies,
+    })
+
+
+@app.post("/technologies-page")
+def technologies_add(request: Request, name: str = Form(...), db: Session = Depends(get_db)):
+    current_user = get_current_user_from_cookie(access_token=request.cookies.get("access_token"), db=db)
+    if not current_user:
+        return RedirectResponse(url="/login-page", status_code=303)
+
+    name = name.strip()
+    if name:
+        exists = db.query(models.Technology).filter(func.lower(models.Technology.name) == name.lower()).first()
+        if not exists:
+            db.add(models.Technology(name=name))
+            try:
+                db.commit()
+            except IntegrityError:
+                db.rollback()
+
+    return RedirectResponse(url="/technologies-page", status_code=303)
