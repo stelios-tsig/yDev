@@ -7,7 +7,20 @@
 import os
 import smtplib
 import sys
+import traceback
 from email.message import EmailMessage
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+
+def _print_to_console(to: str, subject: str, body: str) -> None:
+    print("=" * 60, file=sys.stderr)
+    print(f"[email] To:      {to}", file=sys.stderr)
+    print(f"[email] Subject: {subject}", file=sys.stderr)
+    print(body, file=sys.stderr)
+    print("=" * 60, file=sys.stderr)
 
 
 def send_email(to: str, subject: str, body: str) -> None:
@@ -15,11 +28,7 @@ def send_email(to: str, subject: str, body: str) -> None:
 
     if not host:
         #Dev mode: το γράφουμε στο console αντί να το στείλουμε.
-        print("=" * 60, file=sys.stderr)
-        print(f"[email] To:      {to}", file=sys.stderr)
-        print(f"[email] Subject: {subject}", file=sys.stderr)
-        print(body, file=sys.stderr)
-        print("=" * 60, file=sys.stderr)
+        _print_to_console(to, subject, body)
         return
 
     port = int(os.getenv("SMTP_PORT", "587"))
@@ -33,8 +42,15 @@ def send_email(to: str, subject: str, body: str) -> None:
     msg["Subject"] = subject
     msg.set_content(body)
 
-    with smtplib.SMTP(host, port) as smtp:
-        smtp.starttls()
-        if user and password:
-            smtp.login(user, password)
-        smtp.send_message(msg)
+    try:
+        with smtplib.SMTP(host, port, timeout=20) as smtp:
+            smtp.starttls()
+            if user and password:
+                smtp.login(user, password)
+            smtp.send_message(msg)
+    except Exception:
+        #Δεν ρίχνουμε το request· γράφουμε το σφάλμα και τυπώνουμε το μήνυμα
+        #στην κονσόλα ώστε να μη χαθεί ο σύνδεσμος επαναφοράς.
+        print("[email] SMTP αποτυχία — το μήνυμα δεν στάλθηκε:", file=sys.stderr)
+        traceback.print_exc()
+        _print_to_console(to, subject, body)
