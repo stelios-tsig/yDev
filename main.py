@@ -19,6 +19,7 @@ from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode
 from cloud_utils import upload_image_to_cloudinary
 from email_utils import send_email
+from rate_limit import rate_limit
 
 
 # Το schema της βάσης το διαχειρίζεται πλέον το Alembic (alembic upgrade head).
@@ -156,7 +157,8 @@ def read_projects(skip:int = 0, limit: int = 100, db: Session= Depends(get_db)):
 #login------------------------------------------------------------------------------
 
 @app.post("/login")
-def login(form_data: OAuth2PasswordRequestForm =Depends(), db:Session= Depends(get_db)):
+def login(request: Request, form_data: OAuth2PasswordRequestForm =Depends(), db:Session= Depends(get_db)):
+    rate_limit(request, "login", max_calls=10, window_seconds=60)
     user = db.query(models.User).filter(models.User.username == form_data.username).first()
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Incorrect username or password")
@@ -439,11 +441,13 @@ def register_page(request: Request):
 
 @app.post("/register")
 def register_submit(
+    request: Request,
     username: str = Form(...),
     email: str = Form(...),
     password: str = Form(...),
     db: Session = Depends(get_db),
 ):
+    rate_limit(request, "register", max_calls=10, window_seconds=60)
 
     email = normalize_email(email)
     existing_user = db.query(models.User).filter(models.User.email == email).first()
@@ -468,6 +472,7 @@ def login_page_submit(
     password: str = Form(...),
     db: Session = Depends(get_db),
 ):
+    rate_limit(request, "login", max_calls=10, window_seconds=60)
     user = db.query(models.User).filter(models.User.username == username).first()
     if not user or not verify_password(password, user.hashed_password):
         return templates.TemplateResponse(
@@ -920,6 +925,7 @@ def forgot_password_page(request: Request):
 
 @app.post("/forgot-password")
 def forgot_password_submit(request: Request, email: str = Form(...), db: Session = Depends(get_db)):
+    rate_limit(request, "forgot", max_calls=5, window_seconds=60)
     email = normalize_email(email)
     # func.lower ώστε να ταιριάζει και με παλιές εγγραφές που αποθηκεύτηκαν με κεφαλαία.
     user = db.query(models.User).filter(func.lower(models.User.email) == email).first()

@@ -16,6 +16,8 @@ os.environ.setdefault("SECRET_KEY", "test-secret-key-not-for-production")
 os.environ.setdefault("CLOUDINARY_CLOUD_NAME", "test")
 os.environ.setdefault("CLOUDINARY_API_KEY", "test")
 os.environ.setdefault("CLOUDINARY_API_SECRET", "test")
+# Το rate limiting θα έσπαγε τη suite (πολλά register/login από το ίδιο IP).
+os.environ["RATE_LIMIT_ENABLED"] = "false"
 
 from fastapi.testclient import TestClient  # noqa: E402
 
