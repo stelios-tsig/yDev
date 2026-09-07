@@ -52,6 +52,16 @@ alembic current                               # ποιο migration «βλέπε�
 
 > Σε μια βάση που ήδη έχει τους πίνακες (π.χ. δημιουργήθηκαν πριν μπει το Alembic) χρησιμοποίησε `alembic stamp head` αντί για `upgrade head`, ώστε να μην προσπαθήσει να ξαναδημιουργήσει ό,τι υπάρχει ήδη.
 
+## Deploy (Render)
+
+Το [`render.yaml`](render.yaml) είναι έτοιμο Blueprint. Στο Render: **New + → Blueprint →**
+διάλεξε αυτό το repo. Το build τρέχει `pip install -r requirements.txt && alembic upgrade head`
+και το app ξεκινά με `uvicorn main:app --host 0.0.0.0 --port $PORT`.
+
+Πριν το πρώτο deploy όρισε στο **Environment**: `DATABASE_URL` (Neon), `CLOUDINARY_*`
+και `SMTP_*`. Το `SECRET_KEY` δημιουργείται αυτόματα. Η έκδοση Python καρφώνεται
+στο [`runtime.txt`](runtime.txt).
+
 ## Δομή
 
 | Αρχείο | Ρόλος |

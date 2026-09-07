@@ -1,0 +1,45 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+# Στο Render: New + -> Blueprint -> διάλεξε αυτό το repo. Θα διαβάσει αυτό το
+# αρχείο και θα φτιάξει την υπηρεσία. Μετά συμπληρώνεις τα secrets (sync: false).
+
+services:
+  - type: web
+    name: ydev
+    runtime: python
+    plan: free
+    region: frankfurt
+    branch: main
+
+    # Εγκατάσταση πακέτων + εφαρμογή των migrations στη βάση.
+    buildCommand: "pip install -r requirements.txt && alembic upgrade head"
+
+    # Το Render περνάει τη θύρα μέσω $PORT.
+    startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT"
+
+    healthCheckPath: /home
+
+    envVars:
+      # Δημιουργείται αυτόματα ένα τυχαίο μυστικό.
+      - key: SECRET_KEY
+        generateValue: true
+
+      # Τα παρακάτω τα βάζεις εσύ στο dashboard (Environment tab) — δεν
+      # μπαίνουν στο git.
+      - key: DATABASE_URL
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM
+        sync: false

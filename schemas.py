@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr
 from enum import Enum
 
 
@@ -12,8 +12,7 @@ class TechnologyCreate(TechnologyBase):
 class Technology(TechnologyBase):
     id : int # Id του αντικειμένου που επιστρέφεται από την βάση δεδομένων.
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class UserBase(BaseModel): #Κλάση Β
     username: str
@@ -29,8 +28,8 @@ class User(UserBase):
     id: int
     bio: str | None = None
 
-    class Config:
-        from_attributes = True  # Επιτρέπει την μετατροπή από SQLAlchemy μοντέλα σε Pydantic μοντέλα.
+    # Επιτρέπει την μετατροπή από SQLAlchemy μοντέλα σε Pydantic μοντέλα.
+    model_config = ConfigDict(from_attributes=True)
 
 class ProjectBase(BaseModel): #Κλάση Γ
     title: str
@@ -47,8 +46,7 @@ class Project(ProjectBase):
     owner: User
     technologies: list[Technology] = []  # Λίστα με τα αντικείμενα Technology που σχετίζονται με το project.
 
-    class Config:
-        from_attributes = True  # Επιτρέπει την μετατροπή από SQLAlchemy μοντέλα σε Pydantic μοντέλα.
+    model_config = ConfigDict(from_attributes=True)
 
 
 
@@ -61,8 +59,7 @@ class Version(BaseModel):
     version_number: str
     changelog: str | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class VersionCreate(BaseModel):
     version_number: str
@@ -87,8 +84,7 @@ class Comment(CommentBase):
     id: int
     user: User
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class RatingBase(BaseModel):
     stars: int
@@ -100,8 +96,5 @@ class Rating(RatingBase):
     id: int
     user: User
 
-    class Config:
-        from_attributes = True
-    
-
+    model_config = ConfigDict(from_attributes=True)
 
