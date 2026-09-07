@@ -14,6 +14,7 @@ import os
 import smtplib
 import sys
 import traceback
+import urllib.error
 import urllib.request
 from email.message import EmailMessage
 
@@ -47,8 +48,12 @@ def _send_via_resend(to: str, subject: str, body: str) -> None:
             "Content-Type": "application/json",
         },
     )
-    with urllib.request.urlopen(req, timeout=20) as resp:
-        resp.read()
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            resp.read()
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", "replace")
+        raise RuntimeError(f"Resend {exc.code}: {detail}") from exc
 
 
 def _send_via_smtp(to: str, subject: str, body: str) -> None:
