@@ -54,7 +54,7 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
 @app.get("/")
 def read_root():
-    return {"message": "yDev. Welcome!"}
+    return RedirectResponse(url="/home")
 
 #Δημιουργία ενός νέου τεχνολογικού αντικειμένου
 #Δοκιμή με χρήση του FastAPI και SQLAlchemy για την αποθήκευση ενός νέου αντικειμένου τεχνολογίας στη βάση δεδομένων.
