@@ -95,6 +95,11 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
 def read_root():
     return RedirectResponse(url="/home")
 
+#health check για να ελέγχουμε εαν το API είναι up
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
+
 #Δημιουργία ενός νέου τεχνολογικού αντικειμένου
 #Δοκιμή με χρήση του FastAPI και SQLAlchemy για την αποθήκευση ενός νέου αντικειμένου τεχνολογίας στη βάση δεδομένων.
 
