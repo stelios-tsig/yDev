@@ -21,3 +21,8 @@ def test_unknown_url_json_404_for_api_clients(client):
     resp = client.get("/no/such/page", headers={"accept": "application/json"})
     assert resp.status_code == 404
     assert resp.json()["detail"] == "Not Found"
+
+def test_health_endpoint(client):
+    resp = client.get("/health")
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "ok"}
