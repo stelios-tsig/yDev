@@ -31,6 +31,18 @@ class User(UserBase):
     # Επιτρέπει την μετατροπή από SQLAlchemy μοντέλα σε Pydantic μοντέλα.
     model_config = ConfigDict(from_attributes=True)
 
+
+class PublicUser(BaseModel):
+    # Τα /projects/, /projects/{id}/comments/ και /projects/{id}/ratings/ είναι
+    # ανοιχτά χωρίς σύνδεση. Αν φώλιαζαν το User (που κληρονομεί το email από το
+    # UserBase), οποιοσδήποτε θα μπορούσε να μαζέψει τα email όλων όσων έχουν
+    # ανεβάσει project ή γράψει σχόλιο. Γι' αυτό εδώ δεν υπάρχει email.
+    id: int
+    username: str
+    bio: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
 class ProjectBase(BaseModel): #Κλάση Γ
     title: str
     description: str | None = None #Προαιρετικό πεδίο, μπορεί να είναι None.
@@ -43,7 +55,7 @@ class ProjectCreate(ProjectBase):
 
 class Project(ProjectBase):
     id: int
-    owner: User
+    owner: PublicUser
     technologies: list[Technology] = []  # Λίστα με τα αντικείμενα Technology που σχετίζονται με το project.
 
     model_config = ConfigDict(from_attributes=True)
@@ -82,7 +94,7 @@ class CommentCreate(CommentBase):
 
 class Comment(CommentBase):
     id: int
-    user: User
+    user: PublicUser
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -94,7 +106,7 @@ class RatingCreate(RatingBase):
 
 class Rating(RatingBase):
     id: int
-    user: User
+    user: PublicUser
 
     model_config = ConfigDict(from_attributes=True)
 
