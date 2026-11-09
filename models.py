@@ -14,7 +14,9 @@ project_technologies = Table(
     "project_technologies",
     Base.metadata,
     Column("project_id", Integer, ForeignKey("projects.id"), primary_key=True),
-    Column("technology_id", Integer, ForeignKey("technologies.id"), primary_key=True),
+    # Το primary key ειναι (project_id, technology_id), αρα καλυπτει μονο αναζητησεις
+    # που ξεκινουν απο project_id. Το φιλτρο τεχνολογιας στο /home ψαχνει αναποδα.
+    Column("technology_id", Integer, ForeignKey("technologies.id"), primary_key=True, index=True),
 )
 
 
@@ -36,7 +38,13 @@ class User(Base):
     hashed_password = Column(String, nullable=False) 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     bio = Column(String, nullable=True)
-    projects = relationship("Project", back_populates="owner")
+
+    # Χωρις cascade, η διαγραφη χρηστη θα εσκαγε σε foreign key violation:
+    # τα σχολια και οι βαθμολογιες του σε ΞΕΝΑ projects θα εμεναν ορφανα.
+    projects = relationship("Project", back_populates="owner", cascade="all, delete-orphan")
+    comments = relationship("Comment", back_populates="user", cascade="all, delete-orphan")
+    ratings = relationship("Rating", back_populates="user", cascade="all, delete-orphan")
+    reset_tokens = relationship("PasswordResetToken", back_populates="user", cascade="all, delete-orphan")
 
 
 class Project(Base):
@@ -50,7 +58,7 @@ class Project(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     image_url = Column(String, nullable=True)
     
-    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
 
     owner = relationship("User", back_populates="projects")
     versions = relationship("Version", back_populates="project", cascade="all, delete-orphan")
@@ -68,7 +76,7 @@ class Version(Base):
     changelog = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False, index=True)
     project = relationship("Project", back_populates="versions")
 
 
@@ -80,11 +88,11 @@ class Comment(Base):
     category = Column(String, nullable=False)  # ΑΛΛΑΓΗ: πρόσθεσα το πεδίο που έλειπε ("feature_idea" / "bug_report")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
 
     project = relationship("Project", back_populates="comments")
-    user = relationship("User")
+    user = relationship("User", back_populates="comments")
 
 
 class Rating(Base):  
@@ -95,11 +103,13 @@ class Rating(Base):
     stars = Column(Integer, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False, index=True)
+    # Το user_id δεν θελει δικο του index: το unique constraint (user_id, project_id)
+    # φτιαχνει ηδη index με πρωτη στηλη το user_id.
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     project = relationship("Project", back_populates="ratings")
-    user = relationship("User")
+    user = relationship("User", back_populates="ratings")
 
 
 class PasswordResetToken(Base):
@@ -107,9 +117,9 @@ class PasswordResetToken(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     token = Column(String, unique=True, nullable=False, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     expires_at = Column(DateTime(timezone=True), nullable=False)
     used = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    user = relationship("User")
+    user = relationship("User", back_populates="reset_tokens")

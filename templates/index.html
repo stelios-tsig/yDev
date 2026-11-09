@@ -12,7 +12,9 @@
             <a href="/create-project">+ Νέο Project</a>
             <a href="/technologies-page">Τεχνολογίες</a>
             <a href="/user/{{ current_user.id }}/page">Γεία σου, {{ current_user.username }}!</a>
-            <a href="/logout">Αποσύνδεση</a>
+            <form method="POST" action="/logout">
+                <button type="submit" class="nav-button">Αποσύνδεση</button>
+            </form>
         {% else %}
             <a href="/login-page">Σύνδεση</a>
             <a href="/register">Εγγραφή</a>
@@ -21,7 +23,7 @@
     <h1>yDev - Projects</h1>
 
     <form method="GET" action="/home" class="filter-bar">
-        <input type="text" name="q" value="{{ q }}" placeholder="Αναζήτηση σε τίτλο...">
+        <input type="text" name="q" value="{{ q }}" placeholder="Αναζήτηση σε τίτλο ή περιγραφή...">
 
         <select name="category">
             <option value="">Όλες οι κατηγορίες</option>

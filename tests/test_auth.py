@@ -47,7 +47,7 @@ def test_login_wrong_password_shows_error(client):
 
 def test_logout_clears_cookie(client, make_user):
     make_user("erin")
-    resp = client.get("/logout", follow_redirects=False)
+    resp = client.post("/logout", follow_redirects=False)
     assert resp.status_code == 303
     assert client.cookies.get("access_token") is None
 
@@ -90,3 +90,11 @@ def test_json_create_user_hashes_password(client):
     assert body["username"] == "jsonuser"
     assert "password" not in body
     assert "hashed_password" not in body
+
+
+def test_logout_rejects_get(client, make_user):
+    """Το logout αλλάζει κατάσταση: ένα GET από prefetcher δεν πρέπει να αποσυνδέει."""
+    make_user("gina")
+    resp = client.get("/logout", follow_redirects=False)
+    assert resp.status_code == 405
+    assert client.cookies.get("access_token") is not None

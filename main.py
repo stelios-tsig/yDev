@@ -5,8 +5,8 @@ from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.responses import RedirectResponse
 from fastapi.exception_handlers import http_exception_handler
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from sqlalchemy import func
-from sqlalchemy.orm import Session
+from sqlalchemy import func, or_
+from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy.exc import IntegrityError
 from database import get_db
 from typing import List
@@ -147,7 +147,14 @@ def create_project(project: schemas.ProjectCreate, current_user: models.User = D
 #Το συγκεκριμένο GET πρέπει να λειτουργεί μετά το POST διότι η λειτουργία του γίνεται με αυτό και όχι παράλληλα.
 @app.get("/projects/{project_id}", response_model= schemas.Project)
 def read_project(project_id: int, db: Session = Depends(get_db)):
-    project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    # Το schemas.Project φωλιάζει owner και technologies. Χωρίς eager loading
+    # το serialization θα τα ζητούσε με χωριστά queries το καθένα.
+    project = (
+        db.query(models.Project)
+        .options(joinedload(models.Project.owner), selectinload(models.Project.technologies))
+        .filter(models.Project.id == project_id)
+        .first()
+    )
     if not project: #Εαν δεν υπάρχει πρότζεκτ
         raise HTTPException(status_code=404, detail="Project not found")
     return project
@@ -156,7 +163,13 @@ def read_project(project_id: int, db: Session = Depends(get_db)):
 
 @app.get("/projects/", response_model=List[schemas.Project])
 def read_projects(skip:int = 0, limit: int = 100, db: Session= Depends(get_db)):
-    projects = db.query(models.Project).offset(skip).limit(limit).all()
+    projects = (
+        db.query(models.Project)
+        .options(joinedload(models.Project.owner), selectinload(models.Project.technologies))
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
     return projects
 
 #login------------------------------------------------------------------------------
@@ -199,7 +212,12 @@ def create_comment(
 #Comments
 @app.get("/projects/{project_id}/comments/", response_model=List[schemas.Comment])
 def read_comments(project_id: int, db: Session =Depends(get_db)):
-    comments = db.query(models.Comment).filter(models.Comment.project_id == project_id).all()
+    comments = (
+        db.query(models.Comment)
+        .options(joinedload(models.Comment.user))
+        .filter(models.Comment.project_id == project_id)
+        .all()
+    )
     return comments
 
 #Rating
@@ -236,7 +254,12 @@ def create_rating(
 
 @app.get("/projects/{project_id}/ratings/", response_model=List[schemas.Rating])
 def read_ratings(project_id: int, db: Session = Depends(get_db)):
-    ratings = db.query(models.Rating).filter(models.Rating.project_id == project_id).all()
+    ratings = (
+        db.query(models.Rating)
+        .options(joinedload(models.Rating.user))
+        .filter(models.Rating.project_id == project_id)
+        .all()
+    )
     return ratings
 
 
@@ -420,11 +443,22 @@ def update_comment(
 
 @app.get("/project/{project_id}/page")
 def project_detail_page(project_id: int, request: Request, db: Session = Depends(get_db)):
-    project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    project = (
+        db.query(models.Project)
+        .options(joinedload(models.Project.owner), selectinload(models.Project.technologies))
+        .filter(models.Project.id == project_id)
+        .first()
+    )
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    comments = db.query(models.Comment).filter(models.Comment.project_id == project_id).all()
+    # Το template τυπώνει comment.user.username για κάθε σχόλιο.
+    comments = (
+        db.query(models.Comment)
+        .options(joinedload(models.Comment.user))
+        .filter(models.Comment.project_id == project_id)
+        .all()
+    )
     ratings = db.query(models.Rating).filter(models.Rating.project_id == project_id).all()
     versions = db.query(models.Version).filter(models.Version.project_id == project_id).all()
 
@@ -510,7 +544,11 @@ def home(
 
     query = db.query(models.Project)
     if q:
-        query = query.filter(models.Project.title.ilike(f"%{q}%"))
+        # Η αναζήτηση καλύπτει τίτλο ΚΑΙ περιγραφή.
+        like = f"%{q}%"
+        query = query.filter(
+            or_(models.Project.title.ilike(like), models.Project.description.ilike(like))
+        )
     if category:
         query = query.filter(models.Project.category == category)
     if tech:
@@ -520,8 +558,14 @@ def home(
     total_pages = max((total + PROJECTS_PER_PAGE - 1) // PROJECTS_PER_PAGE, 1)
     page = min(max(page, 1), total_pages)
 
+    # Η κάρτα κάθε project δείχνει owner και technologies. Τα options μπαίνουν
+    # εδώ και όχι στο "query" παραπάνω, για να μην επηρεάσουν το count().
     projects = (
-        query.order_by(models.Project.id.desc())
+        query.options(
+            joinedload(models.Project.owner),
+            selectinload(models.Project.technologies),
+        )
+        .order_by(models.Project.id.desc())
         .offset((page - 1) * PROJECTS_PER_PAGE)
         .limit(PROJECTS_PER_PAGE)
         .all()
@@ -561,7 +605,10 @@ def home(
         "next_url": next_url,
     })
 
-@app.get("/logout")
+# Το logout αλλάζει κατάσταση, άρα δεν πρέπει να απαντά σε GET: prefetchers,
+# επιταχυντές browser και antivirus μπορούν να ακολουθήσουν ένα GET μόνα τους
+# και να αποσυνδέσουν τον χρήστη χωρίς να το ζητήσει.
+@app.post("/logout")
 def logout():
     response = RedirectResponse(url="/home", status_code=303)
     response.delete_cookie("access_token", samesite="lax", secure=COOKIE_SECURE)

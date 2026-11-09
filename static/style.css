@@ -173,6 +173,27 @@ h1 {
     color: var(--text-light);
     text-decoration: none;
 }
+
+/* Το logout είναι form (POST), αλλά στο nav πρέπει να δείχνει σαν σύνδεσμος.
+   Το display:contents βάζει το κουμπί απευθείας στο flex του .top-nav,
+   ώστε να παίρνει κανονικά το gap. */
+.top-nav form {
+    display: contents;
+}
+
+.nav-button {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--text-light);
+    font-family: inherit;
+    font-size: inherit;
+    cursor: pointer;
+}
+
+.nav-button:hover {
+    text-decoration: underline;
+}
 .tech-checkboxes {
     display: flex;
     flex-wrap: wrap;
@@ -416,6 +437,7 @@ textarea {
 
 [data-theme="matrix"] a,
 [data-theme="matrix"] .top-nav a,
+[data-theme="matrix"] .nav-button,
 [data-theme="matrix"] .back-link,
 [data-theme="matrix"] .edit-link,
 [data-theme="matrix"] .link-button {
