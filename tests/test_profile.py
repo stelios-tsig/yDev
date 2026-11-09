@@ -1,6 +1,6 @@
 def test_profile_page_public(client, make_user):
     make_user("pat")
-    client.get("/logout")
+    client.post("/logout")
     # ίδιο user id δεν έχει σημασία· ο πρώτος χρήστης παίρνει id 1
     resp = client.get("/user/1/page")
     assert resp.status_code == 200

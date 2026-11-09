@@ -59,3 +59,21 @@ def test_home_tech_filter(client, make_user, make_project):
     resp = client.get(f"/home?tech={tech_id}")
     assert "Rusty" in resp.text
     assert "NoTech" not in resp.text
+
+
+def test_home_text_search_matches_description(client, make_user, make_project):
+    """Η αναζήτηση πρέπει να πιάνει και την περιγραφή, όχι μόνο τον τίτλο."""
+    make_user("writer")
+    make_project(title="Άσχετος τίτλος", description="χτισμένο με raylib")
+    make_project(title="Κάτι άλλο", description="τίποτα σχετικό")
+
+    resp = client.get("/home?q=raylib")
+    assert "1 project" in resp.text
+    assert "Άσχετος τίτλος" in resp.text
+
+
+def test_home_text_search_is_case_insensitive(client, make_user, make_project):
+    make_user("writer")
+    make_project(title="Κάτι", description="Χτισμένο με RayLib")
+
+    assert "1 project" in client.get("/home?q=raylib").text

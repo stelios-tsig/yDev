@@ -50,7 +50,7 @@ def test_unknown_email_no_token_generic_message(client, captured_emails):
 
 def test_known_email_creates_token_and_sends_link(client, make_user, captured_emails):
     make_user("frank")
-    client.get("/logout")
+    client.post("/logout")
 
     resp = client.post("/forgot-password", data={"email": "frank@example.com"})
     assert resp.status_code == 200
@@ -85,7 +85,7 @@ def test_reset_changes_password_and_consumes_token(client, make_user, captured_e
     make_user("hank")
     client.post("/forgot-password", data={"email": "hank@example.com"})
     token = _latest_token().token
-    client.get("/logout")
+    client.post("/logout")
 
     resp = client.post(f"/reset-password/{token}", data={"password": "brandnew1"}, follow_redirects=False)
     assert resp.status_code == 303
