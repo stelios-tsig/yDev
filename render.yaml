@@ -27,6 +27,12 @@ services:
       - key: COOKIE_SECURE
         value: "true"
 
+      # Το Render βάζει ένα proxy μπροστά, που προσθέτει την πραγματική IP
+      # στο τέλος του X-Forwarded-For. Χωρίς αυτό ο rate limiter αγνοεί το
+      # header εντελώς και μετράει τη διεύθυνση του proxy για όλους.
+      - key: TRUSTED_PROXY_COUNT
+        value: "1"
+
       # Τα παρακάτω τα βάζεις εσύ στο dashboard (Environment tab) — δεν
       # μπαίνουν στο git.
       - key: DATABASE_URL
