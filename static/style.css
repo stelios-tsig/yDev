@@ -218,7 +218,8 @@ textarea {
     resize: vertical;
 }
 
-.comment-form {
+.comment-form,
+.version-form {
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -226,7 +227,9 @@ textarea {
 }
 
 .comment-form textarea,
-.comment-form select {
+.comment-form select,
+.version-form textarea,
+.version-form input[type="text"] {
     padding: 10px 12px;
     border-radius: 8px;
     border: 1px solid rgba(255, 255, 255, 0.3);
@@ -235,7 +238,8 @@ textarea {
     font-family: inherit;
 }
 
-.comment-form button {
+.comment-form button,
+.version-form button {
     padding: 10px;
     border: none;
     border-radius: 8px;

@@ -60,11 +60,22 @@
         <h2>Εκδόσεις</h2>
         {% for version in versions %}
             <div class="version-item">
-                <strong>{{ version.version_number }}</strong> — {{ version.changelog }}
+                <strong>{{ version.version_number }}</strong>
+                {%- if version.changelog %} — {{ version.changelog }}{% endif %}
             </div>
         {% else %}
             <p class="muted">Δεν υπάρχουν καταχωρημένες εκδόσεις.</p>
         {% endfor %}
+
+        {# Μόνο ο ιδιοκτήτης καταχωρεί εκδόσεις, όπως και στο API. #}
+        {% if current_user and current_user.id == project.owner_id %}
+            <h3>Πρόσθεσε έκδοση</h3>
+            <form method="POST" action="/project/{{ project.id }}/version-submit" class="version-form">
+                <input type="text" name="version_number" placeholder="π.χ. 1.2.0" required>
+                <textarea name="changelog" rows="2" placeholder="Τι άλλαξε; (προαιρετικό)"></textarea>
+                <button type="submit">Καταχώρηση</button>
+            </form>
+        {% endif %}
 
         <h2>Σχόλια ({{ comments|length }})</h2>
         {% for comment in comments %}
