@@ -22,6 +22,7 @@ os.environ["RATE_LIMIT_ENABLED"] = "false"
 from fastapi.testclient import TestClient  # noqa: E402
 
 import main  # noqa: E402
+from services import images as image_service  # noqa: E402
 from database import Base, engine  # noqa: E402
 
 
@@ -76,8 +77,13 @@ def login(client):
 
 @pytest.fixture
 def no_cloudinary(monkeypatch):
-    """Μπλοκάρει το πραγματικό ανέβασμα στο Cloudinary."""
-    monkeypatch.setattr(main, "upload_image_to_cloudinary", lambda *a, **k: "https://example.invalid/fake.png")
+    """Μπλοκάρει το πραγματικό ανέβασμα στο Cloudinary.
+
+    Το patch μπαίνει στο module όπου γίνεται η κλήση (services.images), όχι
+    στο main: αλλιώς δεν θα έπιανε τίποτα και τα tests θα χτυπούσαν το
+    πραγματικό Cloudinary.
+    """
+    monkeypatch.setattr(image_service, "upload_image_to_cloudinary", lambda *a, **k: "https://example.invalid/fake.png")
 
 
 @pytest.fixture
