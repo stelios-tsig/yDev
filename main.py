@@ -744,6 +744,41 @@ def submit_rating_form(
 
     return RedirectResponse(url=f"/project/{project_id}/page",status_code=303)
 
+#Φόρμα νέας έκδοσης (μόνο ο ιδιοκτήτης, όπως και στο API)
+
+@app.post("/project/{project_id}/version-submit")
+def submit_version_form(
+    project_id: int,
+    request: Request,
+    version_number: str = Form(...),
+    changelog: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    current_user = get_current_user_from_cookie(access_token=request.cookies.get("access_token"), db=db)
+    if not current_user:
+        return RedirectResponse(url="/login-page", status_code=303)
+
+    project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+#Ελεγχος ιδιοκτησίας-----------------------
+    if project.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only the project owner can add Versions")
+
+    version_number = version_number.strip()
+    if not version_number:
+        raise HTTPException(status_code=422, detail="Version number is required")
+
+    db.add(models.Version(
+        version_number=version_number,
+        changelog=changelog.strip() or None,
+        project_id=project_id,
+    ))
+    db.commit()
+
+    return RedirectResponse(url=f"/project/{project_id}/page", status_code=303)
+
 
 #Edit
 
