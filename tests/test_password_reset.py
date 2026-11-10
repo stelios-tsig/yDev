@@ -2,13 +2,14 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-import main
+from services import passwords as password_service
 
 
 @pytest.fixture
 def captured_emails(monkeypatch):
     sent = []
-    monkeypatch.setattr(main, "send_email", lambda to, subject, body: sent.append((to, subject, body)))
+    # Το patch μπαίνει εκεί που γίνεται η κλήση (services.passwords).
+    monkeypatch.setattr(password_service, "send_email", lambda to, subject, body: sent.append((to, subject, body)))
     return sent
 
 

@@ -89,3 +89,8 @@ def test_image_upload_accepts_small_file(client, make_user, no_cloudinary):
         follow_redirects=False,
     )
     assert resp.status_code == 303
+
+    # Κάνει το no_cloudinary fixture να μετράει: αν το monkeypatch αστοχήσει,
+    # το image_url δεν θα είναι το ψεύτικο και το test πέφτει.
+    project_id = int(resp.headers["location"].split("/")[2])
+    assert client.get(f"/projects/{project_id}").json()["image_url"] == "https://example.invalid/fake.png"
