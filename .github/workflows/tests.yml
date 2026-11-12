@@ -37,3 +37,12 @@ jobs:
             tail -n 120 pytest-output.txt
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
+      # Η σύνοψη και τα logs θέλουν σύνδεση για να διαβαστούν. Τα annotations
+      # όχι, και επιστρέφονται και από το REST API, οπότε η αιτία μιας αποτυχίας
+      # φαίνεται χωρίς να χρειάζεται λογαριασμός.
+      - name: Report failure as an annotation
+        if: failure()
+        run: |
+          body=$(tail -n 40 pytest-output.txt | awk 'BEGIN{ORS="%0A"}{gsub(/%/,"%25");print}')
+          echo "::error title=pytest::$body"

@@ -87,7 +87,11 @@ def test_stale_keys_are_swept(monkeypatch):
     for timestamps, window in rate_limit._hits.values():
         for _ in range(len(timestamps)):
             timestamps.append(timestamps.popleft() - window - 1)
-    rate_limit._last_sweep = 0.0
+
+    # _NEVER_SWEPT και όχι 0.0: το time.monotonic() μετράει από το boot, οπότε
+    # σε φρέσκο CI runner (uptime < _SWEEP_INTERVAL) το 0.0 ΔΕΝ θα ενεργοποιούσε
+    # σάρωση και το test θα έπεφτε ανάλογα με το πόση ώρα είναι ανοιχτό το μηχάνημα.
+    rate_limit._last_sweep = rate_limit._NEVER_SWEPT
 
     rate_limit.rate_limit(_FakeRequest("10.2.0.1"), "login", max_calls=10, window_seconds=60)
 

@@ -21,7 +21,13 @@ from fastapi import HTTPException, Request
 # πότε ένα κλειδί δεν χρησιμεύει πια.
 _hits: dict[str, tuple[deque, int]] = {}
 
-_last_sweep: float = 0.0
+# "Δεν έχει σαρώσει ποτέ". Δεν βάζουμε 0.0: το time.monotonic() μετράει από
+# αυθαίρετη αφετηρία (στο Linux από το boot), οπότε σε μια διεργασία που
+# ξεκίνησε λίγο μετά την εκκίνηση του μηχανήματος το 0.0 θα καθυστερούσε την
+# πρώτη σάρωση μέχρι να περάσει το _SWEEP_INTERVAL από το boot.
+_NEVER_SWEPT = float("-inf")
+
+_last_sweep: float = _NEVER_SWEPT
 
 _SWEEP_INTERVAL = 300   # κάθε πόσο σαρώνουμε για ξεχασμένα κλειδιά
 _MAX_KEYS = 10_000      # αν τα ξεπεράσουμε, σαρώνουμε νωρίτερα
@@ -106,7 +112,7 @@ def clear_all() -> None:
     """Μόνο για tests."""
     global _last_sweep
     _hits.clear()
-    _last_sweep = 0.0
+    _last_sweep = _NEVER_SWEPT
 
 
 def _key_count() -> int:
