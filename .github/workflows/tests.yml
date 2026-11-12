@@ -23,4 +23,17 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run tests
-        run: pytest
+        # pipefail ωστε το tee να μην καταπίνει τον κωδικό εξόδου του pytest.
+        run: |
+          set -o pipefail
+          pytest -q 2>&1 | tee pytest-output.txt
+
+      - name: Show test output in the run summary
+        if: always()
+        run: |
+          {
+            echo '### pytest'
+            echo '```'
+            tail -n 120 pytest-output.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
